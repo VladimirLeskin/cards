@@ -1,6 +1,5 @@
-import { gainPool } from "../../core/flow";
-import { defineModule } from "../../core/module";
-import type { CardDefinition, EffectHandler, GameConfig, HeroDefinition } from "../../core/types";
+import { defineModule, gainPool } from "@deckforge/engine";
+import type { CardDefinition, EffectHandler, GameConfig, HeroDefinition } from "@deckforge/engine";
 
 const art = "assets/anatomy-park";
 

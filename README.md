@@ -17,16 +17,25 @@
 - `TableSession` сверяет токен соединения с `playerId` в команде.
 - Клиенту отдаётся `view()`: порядок колод скрыт, чужая рука скрывается, если конфиг это включает. Полный снимок `serialize()` остаётся у ведущего.
 
+## Как разложено
+
+- `packages/engine` — правила, состояние, команды, ИИ. Свой сборщик tsup.
+- `packages/table` — общий стол: подготовка партии и розыгрыш.
+- `apps/hogwarts` и `apps/anatomy-park` — сами игры. У каждой свой конфиг, картинки и тема стола.
+
+В исходниках движка модули импортируются без расширения. tsup собирает публичный пакет в `packages/engine/dist`. Приложения и тесты читают TypeScript напрямую.
+
 ## Запуск
 
 ```bash
 npm install
 npm test
 npm run demo
-npm run build
+npm run dev:hogwarts
+npm run dev:anatomy-park
 ```
 
-В исходниках модули импортируются без расширения: `./types`, не `./types.js` и не `./types.ts`. Сборщик tsup сам собирает из этого `dist/index.js` и декларации типов. Тесты и `npm run demo` читают TypeScript напрямую.
+`dev:hogwarts` открывает стол на http://127.0.0.1:5173, `dev:anatomy-park` — на http://127.0.0.1:5174. По умолчанию за столом один человек: враги и события ведёт движок. Кнопкой «Добавить игрока» можно посадить второго героя, в том числе компьютер.
 
 ## Как устроена партия
 
@@ -78,7 +87,7 @@ const engine = new DeckEngine(registry);
 Партия:
 
 ```ts
-const match = createEngine().createMatch({
+const match = createEngine([hogwartsModule]).createMatch({
   gameId: "hogwarts",
   seed: 1,
   players: [

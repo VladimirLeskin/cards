@@ -1,31 +1,14 @@
 {
   "name": "deckforge",
-  "version": "0.1.0",
-  "description": "Движок кооперативных колодостроительных карточных игр",
+  "private": true,
   "type": "module",
-  "files": [
-    "dist"
-  ],
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
+  "workspaces": ["packages/*", "apps/*"],
   "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run && tsc -p tsconfig.json --noEmit && tsup",
-    "demo": "tsx src/demo.ts"
-  },
-  "devDependencies": {
-    "@types/node": "^22.15.0",
-    "tsup": "^8.5.1",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "test": "npm test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "demo": "npm run demo --workspace @deckforge/hogwarts && npm run demo --workspace @deckforge/anatomy-park",
+    "dev:hogwarts": "npm run dev --workspace @deckforge/hogwarts",
+    "dev:anatomy-park": "npm run dev --workspace @deckforge/anatomy-park"
   },
   "license": "MIT"
 }

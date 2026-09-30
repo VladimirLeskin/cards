@@ -1,4 +1,5 @@
 export { DeckEngine } from "./core/engine";
+export { gainPool } from "./core/flow";
 export { Match } from "./core/match";
 export { defineModule } from "./core/module";
 export { GameRegistry } from "./core/registry";
@@ -6,8 +7,6 @@ export { SetupError } from "./core/setup";
 export { TableSession } from "./core/session";
 export type { SeatBinding } from "./core/session";
 export { validateModule } from "./core/validate";
-export { anatomyParkModule } from "./games/anatomy-park/module";
-export { hogwartsModule } from "./games/hogwarts/module";
 
 export type {
   ApplyResult,
@@ -36,17 +35,11 @@ export type {
 } from "./core/types";
 
 import { DeckEngine } from "./core/engine";
-import { anatomyParkModule } from "./games/anatomy-park/module";
-import { hogwartsModule } from "./games/hogwarts/module";
 import { GameRegistry } from "./core/registry";
+import type { GameModule } from "./core/types";
 
-export function createDefaultRegistry(): GameRegistry {
+export function createEngine(modules: GameModule[]): DeckEngine {
   const registry = new GameRegistry();
-  registry.register(hogwartsModule);
-  registry.register(anatomyParkModule);
-  return registry;
-}
-
-export function createEngine(): DeckEngine {
-  return new DeckEngine(createDefaultRegistry());
+  for (const game of modules) registry.register(game);
+  return new DeckEngine(registry);
 }

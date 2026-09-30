@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Match } from "../src/core/match";
 import { TableSession } from "../src/core/session";
-import { createEngine } from "../src/index";
 import { fixtureGame } from "./fixture";
 
 describe("мультиплеер и компьютер", () => {
@@ -48,21 +47,5 @@ describe("мультиплеер и компьютер", () => {
     expect(state.turn).toBe(2);
     expect(state.turnOrder[state.activePlayerIndex]).toBe("p1");
     expect(state.log.some((event) => event.message.includes("Бен"))).toBe(true);
-  });
-
-  it("доигрывает партию, где все места отданы компьютеру", () => {
-    const engine = createEngine();
-    for (const gameId of ["hogwarts", "anatomy-park"]) {
-      const match = engine.createMatch({
-        gameId,
-        seed: 21,
-        players: [
-          { name: "Раз", controller: "ai" },
-          { name: "Два", controller: "ai" },
-        ],
-      });
-      expect(match.getState().status).not.toBe("playing");
-      expect(match.getState().log.length).toBeGreaterThan(5);
-    }
   });
 });

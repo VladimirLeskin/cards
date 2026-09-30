@@ -1,0 +1,25 @@
+{
+  "name": "@deckforge/engine",
+  "version": "0.1.0",
+  "description": "Ядро колодостроительных карточных игр",
+  "type": "module",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run && tsc -p tsconfig.json --noEmit && tsup"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@deckforge/table",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@deckforge/engine": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "license": "MIT"
+}
