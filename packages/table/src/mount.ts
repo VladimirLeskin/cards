@@ -15,6 +15,12 @@ interface SeatDraft {
   controller: "human" | "ai";
 }
 
+function assetUrl(src: string): string {
+  if (/^(?:https?:|data:|\/)/.test(src)) return src;
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base.endsWith("/") ? base : `${base}/`}${src}`;
+}
+
 const reasons: Record<string, string> = {
   "all-locations-cleared": "Все локации пройдены",
   "locations-overrun": "Локации захвачены",
@@ -307,7 +313,7 @@ function cardFace(
   }
   const image = document.createElement("img");
   image.alt = "";
-  image.src = card.image;
+  image.src = assetUrl(card.image);
   const title = el("h3", undefined, card.name);
   const bits = [
     card.cost != null ? `цена ${card.cost}` : "",
