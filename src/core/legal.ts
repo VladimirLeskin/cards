@@ -1,6 +1,6 @@
-import { cardDef, heroDef, resourceByRole } from "./module.js";
-import { activePlayer, remainingHealth } from "./flow.js";
-import type { Command, GameModule, GameState, LegalAction } from "./types.js";
+import { cardDef, heroDef, resourceByRole } from "./module";
+import { activePlayer, remainingHealth } from "./flow";
+import type { Command, GameModule, GameState, LegalAction } from "./types";
 
 export function commandsEqual(a: Command, b: Command): boolean {
   return JSON.stringify(a) === JSON.stringify(b);

@@ -1,4 +1,4 @@
-import type { Effect, GameModule } from "./types.js";
+import type { Effect, GameModule } from "./types";
 
 export function validateModule(module: GameModule): string[] {
   const errors: string[] = [];

@@ -1,4 +1,4 @@
-import { resolveStack } from "./effects.js";
+import { resolveStack } from "./effects";
 import {
   activePlayer,
   createCard,
@@ -7,10 +7,10 @@ import {
   emit,
   pushEffects,
   refillMarket,
-} from "./flow.js";
-import { cardDef, heroDef } from "./module.js";
-import { rngFromSeed, shuffleInPlace } from "./rng.js";
-import type { CreateMatchOptions, GameModule, GameState, PlayerSetup } from "./types.js";
+} from "./flow";
+import { cardDef, heroDef } from "./module";
+import { rngFromSeed, shuffleInPlace } from "./rng";
+import type { CreateMatchOptions, GameModule, GameState, PlayerSetup } from "./types";
 
 export class SetupError extends Error {
   constructor(message: string) {

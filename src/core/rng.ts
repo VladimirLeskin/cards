@@ -1,4 +1,4 @@
-import type { RngState } from "./types.js";
+import type { RngState } from "./types";
 
 export function rngFromSeed(seed: number): RngState {
   const s = seed >>> 0;

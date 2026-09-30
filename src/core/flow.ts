@@ -1,5 +1,5 @@
-import { activePlayerId, cardDef, resourceByRole } from "./module.js";
-import { shuffleInPlace } from "./rng.js";
+import { activePlayerId, cardDef, resourceByRole } from "./module";
+import { shuffleInPlace } from "./rng";
 import type {
   CardDefinition,
   Effect,
@@ -8,7 +8,7 @@ import type {
   GameState,
   PlayerState,
   Trigger,
-} from "./types.js";
+} from "./types";
 
 export function emit(
   state: GameState,

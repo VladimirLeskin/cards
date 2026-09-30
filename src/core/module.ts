@@ -1,4 +1,4 @@
-import type { CardDefinition, EffectHandler, GameConfig, GameModule, HeroDefinition } from "./types.js";
+import type { CardDefinition, EffectHandler, GameConfig, GameModule, HeroDefinition } from "./types";
 
 export function defineModule(
   config: GameConfig,

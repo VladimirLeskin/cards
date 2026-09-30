@@ -1,6 +1,6 @@
-import { actorId, legalActions } from "./legal.js";
-import { cardDef, heroDef } from "./module.js";
-import type { CardView, ClientView, GameModule, GameState, HandView, PlayerView } from "./types.js";
+import { actorId, legalActions } from "./legal";
+import { cardDef, heroDef } from "./module";
+import type { CardView, ClientView, GameModule, GameState, HandView, PlayerView } from "./types";
 
 export function projectView(state: GameState, module: GameModule, viewerId?: string): ClientView {
   const actor = actorId(state);

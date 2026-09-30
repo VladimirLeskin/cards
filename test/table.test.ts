@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Match } from "../src/core/match.js";
-import { TableSession } from "../src/core/session.js";
-import { createEngine } from "../src/index.js";
-import { fixtureGame } from "./fixture.js";
+import { Match } from "../src/core/match";
+import { TableSession } from "../src/core/session";
+import { createEngine } from "../src/index";
+import { fixtureGame } from "./fixture";
 
 describe("мультиплеер и компьютер", () => {
   it("не даёт чужому месту отправить команду", () => {

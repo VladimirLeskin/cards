@@ -1,6 +1,6 @@
-import { cardDef, heroDef } from "./module.js";
-import { activePlayer, remainingHealth } from "./flow.js";
-import type { Effect, GameModule, GameState, LegalAction } from "./types.js";
+import { cardDef, heroDef } from "./module";
+import { activePlayer, remainingHealth } from "./flow";
+import type { Effect, GameModule, GameState, LegalAction } from "./types";
 
 export function chooseAiAction(state: GameState, module: GameModule, actions: LegalAction[]): LegalAction | null {
   let best: LegalAction | null = null;

@@ -1,5 +1,5 @@
-import type { GameModule } from "./types.js";
-import { validateModule } from "./validate.js";
+import type { GameModule } from "./types";
+import { validateModule } from "./validate";
 
 export class GameRegistry {
   private readonly modules = new Map<string, GameModule>();

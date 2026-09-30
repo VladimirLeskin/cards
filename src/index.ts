@@ -1,13 +1,13 @@
-export { DeckEngine } from "./core/engine.js";
-export { Match } from "./core/match.js";
-export { defineModule } from "./core/module.js";
-export { GameRegistry } from "./core/registry.js";
-export { SetupError } from "./core/setup.js";
-export { TableSession } from "./core/session.js";
-export type { SeatBinding } from "./core/session.js";
-export { validateModule } from "./core/validate.js";
-export { anatomyParkModule } from "./games/anatomy-park/module.js";
-export { hogwartsModule } from "./games/hogwarts/module.js";
+export { DeckEngine } from "./core/engine";
+export { Match } from "./core/match";
+export { defineModule } from "./core/module";
+export { GameRegistry } from "./core/registry";
+export { SetupError } from "./core/setup";
+export { TableSession } from "./core/session";
+export type { SeatBinding } from "./core/session";
+export { validateModule } from "./core/validate";
+export { anatomyParkModule } from "./games/anatomy-park/module";
+export { hogwartsModule } from "./games/hogwarts/module";
 
 export type {
   ApplyResult,
@@ -33,12 +33,12 @@ export type {
   Side,
   TokenDefinition,
   DieDefinition,
-} from "./core/types.js";
+} from "./core/types";
 
-import { DeckEngine } from "./core/engine.js";
-import { anatomyParkModule } from "./games/anatomy-park/module.js";
-import { hogwartsModule } from "./games/hogwarts/module.js";
-import { GameRegistry } from "./core/registry.js";
+import { DeckEngine } from "./core/engine";
+import { anatomyParkModule } from "./games/anatomy-park/module";
+import { hogwartsModule } from "./games/hogwarts/module";
+import { GameRegistry } from "./core/registry";
 
 export function createDefaultRegistry(): GameRegistry {
   const registry = new GameRegistry();

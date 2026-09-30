@@ -1,4 +1,4 @@
-import { createEngine } from "./index.js";
+import { createEngine } from "./index";
 
 const engine = createEngine();
 const games = [

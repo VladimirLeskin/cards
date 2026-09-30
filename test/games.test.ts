@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createEngine } from "../src/index.js";
+import { createEngine } from "../src/index";
 
 describe("конфиги игр", () => {
   it("регистрирует обе игры с разной логикой поля", () => {

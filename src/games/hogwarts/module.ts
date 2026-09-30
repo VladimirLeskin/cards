@@ -1,6 +1,6 @@
-import { gainPool } from "../../core/flow.js";
-import { defineModule } from "../../core/module.js";
-import type { CardDefinition, EffectHandler, GameConfig, HeroDefinition } from "../../core/types.js";
+import { gainPool } from "../../core/flow";
+import { defineModule } from "../../core/module";
+import type { CardDefinition, EffectHandler, GameConfig, HeroDefinition } from "../../core/types";
 
 const art = "assets/hogwarts";
 

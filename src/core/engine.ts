@@ -1,6 +1,6 @@
-import { Match } from "./match.js";
-import { GameRegistry } from "./registry.js";
-import type { CreateMatchOptions } from "./types.js";
+import { Match } from "./match";
+import { GameRegistry } from "./registry";
+import type { CreateMatchOptions } from "./types";
 
 export class DeckEngine {
   constructor(private readonly registry: GameRegistry) {}

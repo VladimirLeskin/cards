@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { Match } from "../src/core/match.js";
-import { validateModule } from "../src/core/validate.js";
-import { rngFromSeed, shuffleInPlace } from "../src/core/rng.js";
-import { fixtureGame } from "./fixture.js";
+import { Match } from "../src/core/match";
+import { validateModule } from "../src/core/validate";
+import { rngFromSeed, shuffleInPlace } from "../src/core/rng";
+import { fixtureGame } from "./fixture";
 
 describe("колода и сид", () => {
   it("перемешивает одинаково при одном сиде", () => {

@@ -23,7 +23,10 @@
 npm install
 npm test
 npm run demo
+npm run build
 ```
+
+В исходниках модули импортируются без расширения: `./types`, не `./types.js` и не `./types.ts`. Сборщик tsup сам собирает из этого `dist/index.js` и декларации типов. Тесты и `npm run demo` читают TypeScript напрямую.
 
 ## Как устроена партия
 

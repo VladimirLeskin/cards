@@ -1,4 +1,4 @@
-import { cardDef } from "./module.js";
+import { cardDef } from "./module";
 import {
   activePlayer,
   applyDamageToEnemy,
@@ -17,9 +17,9 @@ import {
   resetTurnPools,
   tryAddEnemy,
   closeLocation,
-} from "./flow.js";
-import { nextInt } from "./rng.js";
-import type { Effect, EffectContext, GameModule, GameState } from "./types.js";
+} from "./flow";
+import { nextInt } from "./rng";
+import type { Effect, EffectContext, GameModule, GameState } from "./types";
 
 const RESOLUTION_LIMIT = 5_000;
 

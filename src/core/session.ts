@@ -1,5 +1,5 @@
-import type { ApplyResult, ClientView, Command } from "./types.js";
-import type { Match } from "./match.js";
+import type { ApplyResult, ClientView, Command } from "./types";
+import type { Match } from "./match";
 
 export interface SeatBinding {
   /** Secret per connection. The host maps it to a player id and never trusts the command alone. */

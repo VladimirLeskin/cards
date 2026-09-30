@@ -1,8 +1,8 @@
-import { applyCommand } from "./apply.js";
-import { legalActions } from "./legal.js";
-import { createInitialState } from "./setup.js";
-import { runUntilBlocked } from "./phases.js";
-import { projectView } from "./view.js";
+import { applyCommand } from "./apply";
+import { legalActions } from "./legal";
+import { createInitialState } from "./setup";
+import { runUntilBlocked } from "./phases";
+import { projectView } from "./view";
 import type {
   ApplyResult,
   ClientView,
@@ -12,7 +12,7 @@ import type {
   GameModule,
   GameState,
   LegalAction,
-} from "./types.js";
+} from "./types";
 
 type Listener = (events: GameEvent[]) => void;
 

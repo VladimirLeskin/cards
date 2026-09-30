@@ -1,5 +1,5 @@
-import { defineModule } from "../src/core/module.js";
-import type { EffectHandler, GameConfig, GameModule } from "../src/core/types.js";
+import { defineModule } from "../src/core/module";
+import type { EffectHandler, GameConfig, GameModule } from "../src/core/types";
 
 export function fixtureGame(
   patch?: (config: GameConfig) => void,

@@ -1,6 +1,6 @@
-import { chooseAiAction } from "./ai.js";
-import { executeAndResolve } from "./commands.js";
-import { resolveStack } from "./effects.js";
+import { chooseAiAction } from "./ai";
+import { executeAndResolve } from "./commands";
+import { resolveStack } from "./effects";
 import {
   activePlayer,
   damagePlayer,
@@ -13,10 +13,10 @@ import {
   refillMarket,
   resetTurnPools,
   revealEvents,
-} from "./flow.js";
-import { legalActions } from "./legal.js";
-import { cardDef } from "./module.js";
-import type { GameModule, GameState, PhaseState } from "./types.js";
+} from "./flow";
+import { legalActions } from "./legal";
+import { cardDef } from "./module";
+import type { GameModule, GameState, PhaseState } from "./types";
 
 const freshPhase = (id: PhaseState["id"], step: string): PhaseState => ({
   id,

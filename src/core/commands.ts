@@ -1,5 +1,5 @@
-import { cardDef, heroDef, resourceByRole } from "./module.js";
-import { resolveStack } from "./effects.js";
+import { cardDef, heroDef, resourceByRole } from "./module";
+import { resolveStack } from "./effects";
 import {
   activePlayer,
   applyDamageToEnemy,
@@ -8,10 +8,10 @@ import {
   gainPool,
   healPlayer,
   pushEffects,
-} from "./flow.js";
-import { nextInt } from "./rng.js";
-import type { EffectContext, GameModule, GameState } from "./types.js";
-import type { Command } from "./types.js";
+} from "./flow";
+import { nextInt } from "./rng";
+import type { EffectContext, GameModule, GameState } from "./types";
+import type { Command } from "./types";
 
 export function executeCommand(state: GameState, module: GameModule, command: Command): void {
   switch (command.type) {

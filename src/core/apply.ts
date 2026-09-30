@@ -1,7 +1,7 @@
-import { executeAndResolve } from "./commands.js";
-import { rejectionReason } from "./legal.js";
-import { runUntilBlocked } from "./phases.js";
-import type { ApplyResult, Command, GameModule, GameState } from "./types.js";
+import { executeAndResolve } from "./commands";
+import { rejectionReason } from "./legal";
+import { runUntilBlocked } from "./phases";
+import type { ApplyResult, Command, GameModule, GameState } from "./types";
 
 export function applyCommand(state: GameState, module: GameModule, command: Command): ApplyResult {
   const error = rejectionReason(state, module, command);
