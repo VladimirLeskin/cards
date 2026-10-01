@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
-  <rect width="240" height="340" fill="#2a2438"/>
-  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.45"/>
-  <path d="M138 104 a34 34 0 1 0 2 64 a26 26 0 1 1 -2 -64 z" fill="#fff"/>
-  <text x="120" y="228" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#fff">Проклятие</text>
-</svg>

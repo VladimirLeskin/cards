@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
-  <rect width="240" height="340" rx="16" fill="#2a3f55"/>
-  <rect x="12" y="12" width="216" height="316" rx="10" fill="none" stroke="#fff" stroke-opacity="0.35"/>
-  <text x="120" y="160" text-anchor="middle" font-family="sans-serif" font-size="28" fill="#fff">!</text>
-  <text x="120" y="200" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#fff">Event</text>
-</svg>

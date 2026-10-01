@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
-  <rect width="240" height="340" fill="#c47b2b"/>
-  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.45"/>
-  <polygon points="120,98 129,122 154,122 134,138 142,162 120,148 98,162 106,138 86,122 111,122" fill="#fff"/>
-  <text x="120" y="228" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#fff">Искра</text>
-</svg>
