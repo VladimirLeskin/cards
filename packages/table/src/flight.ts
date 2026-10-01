@@ -98,36 +98,37 @@ export function launchFlights(root: ParentNode, flights: FlightSnapshot[]): void
       continue;
     }
     document.body.append(flight.flyer);
-    const scrollBefore = window.scrollY;
-    destination.scrollIntoView({ block: "nearest", inline: "nearest" });
-    const scrolled = window.scrollY - scrollBefore;
-    const from = { ...flight.rect, top: flight.rect.top - scrolled };
-    if (scrolled !== 0) flight.flyer.style.top = `${from.top}px`;
     const to = boxOf(destination.getBoundingClientRect());
-    const delta = flightDelta(from, to);
+    const delta = flightDelta(flight.rect, to);
+    const endScale = delta.scale < 0.9 ? delta.scale : 1;
+    destination.style.transition = "none";
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
       flight.flyer.remove();
+      destination.style.opacity = "";
+      destination.style.transition = "";
       destination.classList.remove("is-arriving", "is-landing");
       destination.classList.add("is-landed");
     };
-    const duration = 900;
+    const duration = 420;
     const start = performance.now();
     const step = (now: number) => {
       if (settled) return;
       const t = Math.min(1, (now - start) / duration);
-      const eased = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
-      const lift = Math.sin(Math.PI * t) * -24;
-      flight.flyer.style.left = `${from.left + delta.x * eased}px`;
-      flight.flyer.style.top = `${from.top + delta.y * eased + lift}px`;
-      flight.flyer.style.transform = `scale(${1 + (delta.scale - 1) * eased})`;
+      const eased = 1 - (1 - t) ** 3;
+      flight.flyer.style.transform = `translate(${delta.x * eased}px, ${delta.y * eased}px) scale(${1 + (endScale - 1) * eased})`;
+      if (flight.zone !== "discard") {
+        const fade = t < 0.78 ? 0 : (t - 0.78) / 0.22;
+        flight.flyer.style.opacity = String(1 - fade);
+        destination.style.opacity = String(fade);
+      }
       if (t < 1) requestAnimationFrame(step);
       else finish();
     };
     requestAnimationFrame(step);
-    window.setTimeout(finish, duration + 200);
+    window.setTimeout(finish, duration + 80);
   }
 }
 
