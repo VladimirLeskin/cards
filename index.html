@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deckforge — играть</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #f4efe4;
+        --muted: #b7ad9d;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Iowan Old Style", Palatino, "Palatino Linotype", serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 20% 0%, rgba(201, 162, 75, 0.18), transparent 32%),
+          radial-gradient(circle at 90% 10%, rgba(127, 212, 196, 0.16), transparent 28%),
+          #14110e;
+      }
+      main { max-width: 880px; margin: 0 auto; padding: 48px 20px 64px; }
+      h1 { margin: 0 0 8px; font-size: 42px; font-weight: 600; }
+      p.lead { margin: 0 0 28px; color: var(--muted); font-size: 18px; }
+      .games { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      a.game {
+        display: block;
+        min-height: 220px;
+        padding: 22px;
+        border-radius: 18px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      a.game strong { display: block; font-size: 28px; margin-bottom: 8px; }
+      a.game span { color: var(--muted); }
+      a.hogwarts { background: linear-gradient(160deg, #243028, #1a1714 70%); }
+      a.park { background: linear-gradient(160deg, #16343a, #1a1714 70%); }
+      a.game:hover { transform: translateY(-2px); }
+      @media (max-width: 700px) {
+        .games { grid-template-columns: 1fr; }
+        h1 { font-size: 32px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Deckforge</h1>
+      <p class="lead">Два кооперативных стола на одном движке. Можно играть вдвоём с компьютером.</p>
+      <div class="games">
+        <a class="game hogwarts" href="./hogwarts/">
+          <strong>Битва за Хогвартс</strong>
+          <span>Заклинания, покупка уроков и тёмные существа в локациях.</span>
+        </a>
+        <a class="game park" href="./anatomy-park/">
+          <strong>Анатомический парк</strong>
+          <span>Кубик, жетоны и вскрытие угроз внутри тела.</span>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>
