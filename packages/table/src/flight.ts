@@ -85,7 +85,7 @@ export function captureFlights(root: ParentNode, flights: PlannedFlight[]): Flig
     if (!source) continue;
     const rect = source.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) continue;
-    snapshots.push({ ...flight, rect, flyer: makeFlyer(source, rect) });
+    snapshots.push({ ...flight, rect: boxOf(rect), flyer: makeFlyer(source, rect) });
   }
   return snapshots;
 }
@@ -103,7 +103,7 @@ export function launchFlights(root: ParentNode, flights: FlightSnapshot[]): void
     const scrolled = window.scrollY - scrollBefore;
     const from = { ...flight.rect, top: flight.rect.top - scrolled };
     if (scrolled !== 0) flight.flyer.style.top = `${from.top}px`;
-    const to = destination.getBoundingClientRect();
+    const to = boxOf(destination.getBoundingClientRect());
     const delta = flightDelta(from, to);
     let settled = false;
     const finish = () => {
@@ -113,15 +113,27 @@ export function launchFlights(root: ParentNode, flights: FlightSnapshot[]): void
       destination.classList.remove("is-arriving", "is-landing");
       destination.classList.add("is-landed");
     };
-    flight.flyer.addEventListener("transitionend", finish, { once: true });
-    window.setTimeout(finish, 700);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (settled) return;
-        flight.flyer.style.transform = `translate(${delta.x}px, ${delta.y}px) scale(${delta.scale})`;
-      });
-    });
+    const duration = 900;
+    const start = performance.now();
+    const step = (now: number) => {
+      if (settled) return;
+      const t = Math.min(1, (now - start) / duration);
+      const eased = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+      const lift = Math.sin(Math.PI * t) * -24;
+      flight.flyer.style.left = `${from.left + delta.x * eased}px`;
+      flight.flyer.style.top = `${from.top + delta.y * eased + lift}px`;
+      flight.flyer.style.transform = `scale(${1 + (delta.scale - 1) * eased})`;
+      if (t < 1) requestAnimationFrame(step);
+      else finish();
+    };
+    requestAnimationFrame(step);
+    window.setTimeout(finish, duration + 200);
   }
+}
+
+/** DOMRect fields live on the prototype, so object spread would drop them and the flight delta becomes NaN. */
+function boxOf(rect: DOMRect): Box {
+  return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
 }
 
 function destinationSelector(flight: PlannedFlight): string {
@@ -138,6 +150,10 @@ function makeFlyer(source: HTMLElement, rect: DOMRect): HTMLElement {
   flyer.setAttribute("aria-hidden", "true");
   for (const mark of flyer.querySelectorAll(".hint-mark")) mark.remove();
   if (flyer instanceof HTMLButtonElement) flyer.disabled = true;
+  flyer.style.position = "fixed";
+  flyer.style.zIndex = "80";
+  flyer.style.margin = "0";
+  flyer.style.pointerEvents = "none";
   flyer.style.left = `${rect.left}px`;
   flyer.style.top = `${rect.top}px`;
   flyer.style.width = `${rect.width}px`;
