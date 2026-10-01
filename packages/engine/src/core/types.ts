@@ -353,6 +353,7 @@ export type Command =
   | { type: "spendToken"; playerId: string; tokenId: string }
   | { type: "useProp"; playerId: string; propId: string }
   | { type: "endTurn"; playerId: string }
+  | { type: "acknowledge"; playerId: string }
   | { type: "choose"; playerId: string; optionId: string };
 
 export interface LegalAction {

@@ -30,7 +30,10 @@ describe("action hints", () => {
     expect(actionMark({ type: "playCard", playerId: "p1", instanceId: "c1" })).toBe("сыграть");
     expect(actionMark({ type: "buyCard", playerId: "p1", instanceId: "c1" })).toBe("купить");
     expect(actionMark({ type: "assignAttack", playerId: "p1", target: { type: "location" }, amount: 1 })).toBe("атака 1");
-    expect(actionMark({ type: "assignHeal", playerId: "p1", targetPlayerId: "p1", amount: 1 })).toBe("лечение");
+    expect(actionMark({ type: "assignHeal", playerId: "p1", targetPlayerId: "p1", amount: 1 })).toBe("лечение 1");
+    expect(actionHint([action({ type: "acknowledge", playerId: "p1" })])).toBe(
+      "Посмотрите, что сделала угроза, затем нажмите «К действиям».",
+    );
     expect(actionMark({ type: "endTurn", playerId: "p1" })).toBe("");
   });
 

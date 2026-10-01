@@ -113,6 +113,7 @@ describe("партия", () => {
       }),
       { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
     );
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
     const hand = [...match.getState().players.p1!.zones.hand];
     for (const instanceId of hand.slice(0, 2)) {
       expect(match.submit({ type: "playCard", playerId: "p1", instanceId }).ok).toBe(true);
@@ -232,6 +233,8 @@ describe("партия", () => {
     expect(chosen.ok).toBe(true);
     expect(match.getState().pending).toBeNull();
     expect(match.getState().players.p1?.pools.attack).toBe(1);
+    expect(match.getState().phase).toMatchObject({ id: "threat", step: "brief" });
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
     expect(match.getState().phase.id).toBe("action");
   });
 
@@ -259,6 +262,8 @@ describe("партия", () => {
       { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
     );
     expect(match.getState().players.p1?.pools.coins).toBe(1);
+    expect(match.getState().phase.step).toBe("brief");
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
     expect(match.submit({ type: "endTurn", playerId: "p1" }).ok).toBe(true);
     expect(match.getState().status).toBe("playing");
     expect(match.getState().players.p1?.pools.coins).toBe(1);
@@ -357,6 +362,60 @@ describe("партия", () => {
     expect(match.submit({ type: "spendToken", playerId: "p1", tokenId: "chip" }).ok).toBe(true);
     expect(match.getState().players.p1?.pools.attack).toBe(4);
     expect(match.getState().items.tokens.chip?.holders.p1).toBe(0);
+  });
+
+  it("показывает угрозу человеку и пускает к действиям", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.mechanics.eventsPerTurn = 1;
+        config.piles.events = ["boom"];
+        config.piles.enemies = ["brute"];
+        config.cards.find((card) => card.id === "gate")!.enemyCount = 1;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    const state = match.getState();
+    expect(state.phase).toMatchObject({ id: "threat", step: "brief" });
+    expect(state.players.p1?.health).toBe(8);
+    expect(state.log.some((event) => event.message === "Событие: Удар")).toBe(true);
+    expect(state.log.some((event) => event.message === "Громила бьёт Ада на 1")).toBe(true);
+    expect(match.legalActions("p1").map((action) => action.command.type)).toEqual(["acknowledge"]);
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: state.players.p1!.zones.hand[0]! }).ok).toBe(false);
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
+    expect(match.getState().phase.id).toBe("action");
+  });
+
+  it("лечит по одной единице", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.cards.push({
+          id: "salve",
+          name: "Мазь",
+          kind: "starter",
+          text: "2 лечения.",
+          image: "assets/fixture/starter.svg",
+          tags: [],
+          provides: [{ resource: "heal", amount: 2 }],
+        });
+        config.heroes[0]!.startingDeck = [
+          { definitionId: "salve", count: 1 },
+          { definitionId: "spark", count: 4 },
+        ];
+        config.heroes[0]!.health = 6;
+        config.mechanics.eventsPerTurn = 1;
+        config.piles.events = ["boom"];
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
+    const salve = match.getState().players.p1!.zones.hand.find((id) => match.getState().cards[id]?.definitionId === "salve");
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: salve! }).ok).toBe(true);
+    const heal = match.legalActions("p1").find((action) => action.command.type === "assignHeal");
+    expect(heal?.command).toMatchObject({ type: "assignHeal", amount: 1 });
+    expect(match.submit({ type: "assignHeal", playerId: "p1", targetPlayerId: "p1", amount: 2 }).ok).toBe(false);
+    expect(match.submit(heal!.command).ok).toBe(true);
+    expect(match.getState().players.p1?.health).toBe(6);
+    expect(match.getState().players.p1?.pools.heal).toBe(1);
   });
 
   it("отклоняет конфиг без обработчика", () => {

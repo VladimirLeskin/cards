@@ -191,12 +191,17 @@ export function damagePlayer(
   module: GameModule,
   playerId: string,
   amount: number,
+  message?: string,
 ): void {
   if (amount <= 0 || state.status !== "playing") return;
   const player = state.players[playerId];
   if (!player || player.stunned) return;
   player.health = Math.max(0, player.health - amount);
-  emit(state, "damage", `${player.name} получает ${amount} урона`, { playerId, amount, health: player.health });
+  emit(state, "damage", message ?? `${player.name} получает ${amount} урона`, {
+    playerId,
+    amount,
+    health: player.health,
+  });
   if (player.health === 0 && module.config.mechanics.stunOnZeroHealth) {
     player.stunned = true;
     discardFromZone(player, "hand");

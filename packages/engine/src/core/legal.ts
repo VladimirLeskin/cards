@@ -11,6 +11,7 @@ export function actorId(state: GameState): string | null {
   if (state.status !== "playing") return null;
   if (state.pending) return state.pending.playerId;
   if (state.phase.id === "action") return activePlayer(state).id;
+  if (state.phase.id === "threat" && state.phase.step === "brief") return activePlayer(state).id;
   return null;
 }
 
@@ -25,7 +26,11 @@ export function legalActions(state: GameState, module: GameModule, playerId: str
   }
 
   const player = state.players[playerId];
-  if (!player || player.stunned) return [];
+  if (!player) return [];
+  if (state.phase.step === "brief") {
+    return [{ command: { type: "acknowledge", playerId }, label: "К действиям" }];
+  }
+  if (player.stunned) return [];
   const actions: LegalAction[] = [];
 
   const hero = heroDef(module, player.heroId);
@@ -115,10 +120,9 @@ export function legalActions(state: GameState, module: GameModule, playerId: str
     for (const targetId of state.turnOrder) {
       const target = state.players[targetId];
       if (!target || target.stunned || target.health >= target.maxHealth) continue;
-      const amount = Math.min(healPool, target.maxHealth - target.health);
       actions.push({
-        command: { type: "assignHeal", playerId, targetPlayerId: targetId, amount },
-        label: `Лечение ${amount} → ${target.name}`,
+        command: { type: "assignHeal", playerId, targetPlayerId: targetId, amount: 1 },
+        label: `Лечение 1 → ${target.name}`,
       });
     }
   }

@@ -179,10 +179,12 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     });
     top.append(titles, again);
     screen.append(top);
+    const threat = threatNotes(view);
     if (!view.outcome) {
       const hint = actionHint(view.legalActions);
       if (hint) screen.append(hintBar(hint));
     }
+    if (threat.length > 0) screen.append(renderThreat(view, threat, submit));
     if (error) screen.append(el("p", "error", error));
     if (view.outcome) {
       const banner = el("section", "panel outcome");
@@ -195,9 +197,12 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     }
 
     const layout = el("div", "layout");
+    const struck = new Set(
+      threat.filter((event) => event.type === "damage").map((event) => String(event.payload.playerId ?? "")),
+    );
     layout.append(
-      renderPlayers(view, submit, { openId: openDiscardId, toggle: toggleDiscard }),
-      renderBoard(view, submit),
+      renderPlayers(view, submit, { openId: openDiscardId, toggle: toggleDiscard }, struck),
+      renderBoard(view, submit, threat.length > 0),
       renderLog(view, submit),
     );
     screen.append(layout);
@@ -314,10 +319,42 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   paint();
 }
 
+function renderThreat(view: ClientView, notes: ClientView["log"], submit: (command: Command) => void): HTMLElement {
+  const panel = el("section", "panel threat");
+  panel.dataset.testid = "threat";
+  panel.append(el("h2", undefined, "Угроза"));
+  const list = el("ul", "threat-list");
+  for (const note of notes) list.append(el("li", undefined, note.message));
+  panel.append(list);
+  const acknowledge = view.legalActions.find((action) => action.command.type === "acknowledge");
+  if (acknowledge) {
+    const next = button(acknowledge.label, "primary is-legal");
+    next.dataset.testid = "acknowledge";
+    next.dataset.legal = "acknowledge";
+    next.addEventListener("click", () => submit(acknowledge.command));
+    panel.append(next);
+  }
+  return panel;
+}
+
+function threatNotes(view: ClientView): ClientView["log"] {
+  if (view.phase.id !== "threat" || view.phase.step !== "brief") return [];
+  let start = -1;
+  for (let i = view.log.length - 1; i >= 0; i -= 1) {
+    if (view.log[i]?.type === "turn") {
+      start = i;
+      break;
+    }
+  }
+  const beats = new Set(["event", "damage", "enemy", "stun", "recover", "location"]);
+  return view.log.slice(start + 1).filter((event) => beats.has(event.type));
+}
+
 function renderPlayers(
   view: ClientView,
   submit: (command: Command) => void,
   discard: { openId: string | null; toggle: (playerId: string) => void },
+  struck: Set<string>,
 ): HTMLElement {
   const panel = el("aside", "panel");
   panel.append(el("h2", undefined, "Герои"));
@@ -326,7 +363,10 @@ function renderPlayers(
     const heal = view.legalActions.find(
       (action) => action.command.type === "assignHeal" && action.command.targetPlayerId === player.id,
     );
-    const card = el(heal ? "button" : "article", `player${player.id === view.activePlayerId ? " is-active" : ""}${heal ? " is-legal" : ""}`);
+    const card = el(
+      heal ? "button" : "article",
+      `player${player.id === view.activePlayerId ? " is-active" : ""}${heal ? " is-legal" : ""}${struck.has(player.id) ? " is-struck" : ""}`,
+    );
     if (heal && card instanceof HTMLButtonElement) {
       card.type = "button";
       markLegal(card, heal);
@@ -358,7 +398,7 @@ function renderPlayers(
   return panel;
 }
 
-function renderBoard(view: ClientView, submit: (command: Command) => void): HTMLElement {
+function renderBoard(view: ClientView, submit: (command: Command) => void, threat: boolean): HTMLElement {
   const panel = el("main", "panel");
   const locationAttack = view.legalActions.find(
     (action) => action.command.type === "assignAttack" && action.command.target.type === "location",
@@ -377,7 +417,9 @@ function renderBoard(view: ClientView, submit: (command: Command) => void): HTML
         action.command.target.type === "enemy" &&
         action.command.target.instanceId === enemy.instanceId,
     );
-    enemies.append(cardFace(enemy, attack, submit));
+    const face = cardFace(enemy, attack, submit);
+    if (threat) face.classList.add("is-threat");
+    enemies.append(face);
   }
   if (view.enemies.length === 0) enemies.append(el("p", "muted", "Поле чисто"));
   panel.append(enemies);
@@ -385,7 +427,11 @@ function renderBoard(view: ClientView, submit: (command: Command) => void): HTML
   if (view.eventsRevealed.length > 0) {
     panel.append(zoneTitle("События хода", `в колоде ${view.eventDeckCount}`));
     const events = el("div", "row");
-    for (const event of view.eventsRevealed) events.append(cardFace(event));
+    for (const event of view.eventsRevealed) {
+      const face = cardFace(event);
+      if (threat) face.classList.add("is-threat");
+      events.append(face);
+    }
     panel.append(events);
   }
 

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+  <rect width="240" height="340" fill="#3d4a63"/>
+  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.45"/>
+  <path d="M88 156 v-28 q0-36 32-36 t32 36 v28 l-16-14 -16 14 -16-14 -16 14 z" fill="#fff"/>
+  <text x="120" y="228" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#fff">Тень</text>
+</svg>
