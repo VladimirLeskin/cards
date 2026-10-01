@@ -39,7 +39,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         run: npm run build:pages
         env:
-          PAGES_LABEL: Стенд пул-реквеста #${{ github.event.number }}
+          PAGES_LABEL: "Стенд пул-реквеста #${{ github.event.number }}"
 
       - name: Publish main
         if: github.event_name == 'push'
