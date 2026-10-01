@@ -98,8 +98,13 @@ export function launchFlights(root: ParentNode, flights: FlightSnapshot[]): void
       continue;
     }
     document.body.append(flight.flyer);
+    const scrollBefore = window.scrollY;
+    destination.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const scrolled = window.scrollY - scrollBefore;
+    const from = { ...flight.rect, top: flight.rect.top - scrolled };
+    if (scrolled !== 0) flight.flyer.style.top = `${from.top}px`;
     const to = destination.getBoundingClientRect();
-    const delta = flightDelta(flight.rect, to);
+    const delta = flightDelta(from, to);
     let settled = false;
     const finish = () => {
       if (settled) return;

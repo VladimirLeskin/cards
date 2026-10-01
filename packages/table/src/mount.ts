@@ -186,13 +186,23 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     }
 
     const layout = el("div", "layout");
-    layout.append(renderPlayers(view, submit, landingDiscard), renderBoard(view, submit), renderLog(view, submit));
+    layout.append(renderPlayers(view, submit), renderBoard(view, submit), renderLog(view, submit));
     screen.append(layout);
 
     const activePlayer = active;
     if (activePlayer) {
       const played = el("section", "panel");
-      played.append(el("h2", undefined, "В игре"));
+      const head = el("div", "zone-head");
+      head.append(el("h2", undefined, "В игре"));
+      const discard = el(
+        "span",
+        `pile${landingDiscard.has(activePlayer.id) ? " is-landing" : ""}`,
+        `Сброс ${activePlayer.discard.length}`,
+      );
+      discard.dataset.zone = "discard";
+      discard.dataset.playerId = activePlayer.id;
+      head.append(discard);
+      played.append(head);
       const row = el("div", "row");
       row.dataset.zone = "play";
       row.dataset.playerId = activePlayer.id;
@@ -249,11 +259,7 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   paint();
 }
 
-function renderPlayers(
-  view: ClientView,
-  submit: (command: Command) => void,
-  landingDiscard: Set<string>,
-): HTMLElement {
+function renderPlayers(view: ClientView, submit: (command: Command) => void): HTMLElement {
   const panel = el("aside", "panel");
   panel.append(el("h2", undefined, "Герои"));
   for (const player of view.players) {
@@ -279,10 +285,7 @@ function renderPlayers(
     card.append(el("span", "meta", pools));
     const piles = el("div", "piles");
     piles.append(el("span", "pile", `Колода ${player.deckCount}`));
-    const discard = el("span", `pile${landingDiscard.has(player.id) ? " is-landing" : ""}`, `Сброс ${player.discard.length}`);
-    discard.dataset.zone = "discard";
-    discard.dataset.playerId = player.id;
-    piles.append(discard);
+    piles.append(el("span", "pile", `Сброс ${player.discard.length}`));
     card.append(piles);
     panel.append(card);
   }
