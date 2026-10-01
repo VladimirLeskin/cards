@@ -1,5 +1,7 @@
 import { createEngine, SetupError } from "@deckforge/engine";
 import type { CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match } from "@deckforge/engine";
+import { captureFlights, flightPlans, keepFlights, launchFlights, visibleCardIds } from "./flight";
+import type { FlightSnapshot } from "./flight";
 import { actionHint, actionMark, setupHint } from "./hints";
 
 export interface TableTheme {
@@ -42,8 +44,11 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   ];
   let match: Match | null = null;
   let error = "";
+  let flights: FlightSnapshot[] = [];
 
   const paint = () => {
+    const landing = flights;
+    flights = [];
     root.replaceChildren();
     root.style.setProperty("--felt", theme.felt);
     root.style.setProperty("--ink", theme.ink);
@@ -51,13 +56,25 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.style.setProperty("--danger", theme.danger);
     root.style.setProperty("--paper", theme.paper);
     if (!match) renderSetup();
-    else renderMatch(match.view());
+    else renderMatch(match.view(), landing);
+    launchFlights(root, landing);
   };
 
   const submit = (command: Command) => {
     if (!match) return;
+    const played = [...root.querySelectorAll<HTMLElement>("[data-zone=play] [data-card-id]")]
+      .map((card) => card.dataset.cardId)
+      .filter((id): id is string => Boolean(id));
+    const planned = flightPlans(command, config.mechanics.buyDestination, played);
+    const captured = captureFlights(root, planned);
     const result = match.submit(command);
     error = result.ok ? "" : (result.error ?? "Ход отклонён");
+    const visible = visibleCardIds(match.view());
+    const kept = new Set(keepFlights(planned, visible).map((flight) => flight.instanceId));
+    flights = result.ok ? captured.filter((flight) => kept.has(flight.instanceId)) : [];
+    for (const flight of captured) {
+      if (!flights.includes(flight)) flight.flyer.remove();
+    }
     paint();
   };
 
@@ -135,7 +152,9 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.append(screen);
   };
 
-  const renderMatch = (view: ClientView) => {
+  const renderMatch = (view: ClientView, landing: FlightSnapshot[]) => {
+    const arriving = new Set(landing.filter((flight) => flight.zone !== "discard").map((flight) => flight.instanceId));
+    const landingDiscard = new Set(landing.filter((flight) => flight.zone === "discard").map((flight) => flight.playerId));
     const screen = el("section", "match");
     const active = view.players.find((player) => player.id === view.activePlayerId);
     const top = el("header", "topbar");
@@ -167,17 +186,38 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     }
 
     const layout = el("div", "layout");
-    layout.append(renderPlayers(view, submit), renderBoard(view, submit), renderLog(view, submit));
+    layout.append(renderPlayers(view, submit, landingDiscard), renderBoard(view, submit), renderLog(view, submit));
     screen.append(layout);
 
     const activePlayer = active;
+    if (activePlayer) {
+      const played = el("section", "panel");
+      played.append(el("h2", undefined, "В игре"));
+      const row = el("div", "row");
+      row.dataset.zone = "play";
+      row.dataset.playerId = activePlayer.id;
+      row.dataset.testid = "in-play";
+      for (const card of activePlayer.play) {
+        const face = cardFace(card);
+        if (arriving.has(card.instanceId)) face.classList.add("is-arriving");
+        row.append(face);
+      }
+      if (activePlayer.play.length === 0) {
+        row.append(el("p", "muted drop-hint", "Сыгранные карты остаются здесь до конца хода"));
+      }
+      played.append(row);
+      screen.append(played);
+    }
     if (activePlayer && Array.isArray(activePlayer.hand)) {
       const zone = el("section", "panel");
       zone.append(el("h2", undefined, `Рука: ${activePlayer.name}`));
       const hand = el("div", "hand");
       hand.dataset.testid = "hand";
+      hand.dataset.zone = "hand";
       for (const card of activePlayer.hand) {
-        hand.append(cardFace(card, findPlay(view.legalActions, card.instanceId), submit));
+        const face = cardFace(card, findPlay(view.legalActions, card.instanceId), submit);
+        if (arriving.has(card.instanceId)) face.classList.add("is-arriving");
+        hand.append(face);
       }
       if (activePlayer.hand.length === 0) hand.append(el("p", "muted", "Рука пуста"));
       zone.append(hand);
@@ -209,7 +249,11 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   paint();
 }
 
-function renderPlayers(view: ClientView, submit: (command: Command) => void): HTMLElement {
+function renderPlayers(
+  view: ClientView,
+  submit: (command: Command) => void,
+  landingDiscard: Set<string>,
+): HTMLElement {
   const panel = el("aside", "panel");
   panel.append(el("h2", undefined, "Герои"));
   for (const player of view.players) {
@@ -233,10 +277,13 @@ function renderPlayers(view: ClientView, submit: (command: Command) => void): HT
       .map((resource) => `${resource.name} ${player.pools[resource.id] ?? 0}`)
       .join(" · ");
     card.append(el("span", "meta", pools));
-    card.append(el("span", "muted", `Колода ${player.deckCount} · сброс ${player.discard.length}`));
-    if (player.play.length > 0) {
-      card.append(el("span", "meta", `В игре: ${player.play.map((item) => item.name).join(", ")}`));
-    }
+    const piles = el("div", "piles");
+    piles.append(el("span", "pile", `Колода ${player.deckCount}`));
+    const discard = el("span", `pile${landingDiscard.has(player.id) ? " is-landing" : ""}`, `Сброс ${player.discard.length}`);
+    discard.dataset.zone = "discard";
+    discard.dataset.playerId = player.id;
+    piles.append(discard);
+    card.append(piles);
     panel.append(card);
   }
   return panel;
