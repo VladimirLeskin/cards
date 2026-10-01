@@ -4,25 +4,51 @@ on:
   push:
     branches:
       - main
-      - cursor/deck-engine-20da
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 permissions:
   contents: write
 
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
+        if: github.event.action != 'closed'
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build:pages
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          force_orphan: true
+
+      - name: Install
+        if: github.event.action != 'closed'
+        run: npm ci
+
+      - name: Build main
+        if: github.event_name == 'push'
+        run: npm run build:pages
+
+      - name: Build pull request
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        run: npm run build:pages
+        env:
+          PAGES_LABEL: Стенд пул-реквеста #${{ github.event.number }}
+
+      - name: Publish main
+        if: github.event_name == 'push'
+        run: node scripts/publish-pages.mjs root
+
+      - name: Publish pull request
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        run: node scripts/publish-pages.mjs pr ${{ github.event.number }}
+
+      - name: Remove pull request stand
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        run: node scripts/publish-pages.mjs remove ${{ github.event.number }}

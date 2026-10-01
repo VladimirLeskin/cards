@@ -37,7 +37,7 @@ npm run dev:anatomy-park
 
 `dev:hogwarts` открывает стол на http://127.0.0.1:5173, `dev:anatomy-park` — на http://127.0.0.1:5174. По умолчанию за столом один человек: враги и события ведёт движок. Кнопкой «Добавить игрока» можно посадить второго героя, в том числе компьютер.
 
-Собранные столы публикуются на GitHub Pages: https://vladimirleskin.github.io/cards/. Локально ту же сборку даёт `npm run build:pages` — результат лежит в `site/`.
+Собранные столы публикуются на GitHub Pages: https://vladimirleskin.github.io/cards/. У каждого открытого пул-реквеста свой стенд: https://vladimirleskin.github.io/cards/pr/2/ для пул-реквеста номер 2. Список стендов — https://vladimirleskin.github.io/cards/pr/. После закрытия пул-реквеста каталог удаляется. Локально ту же сборку даёт `npm run build:pages` — результат лежит в `site/`.
 
 ## Как устроена партия
 
