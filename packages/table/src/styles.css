@@ -120,7 +120,7 @@ input, select {
 
 .player.is-active { border-color: var(--accent); background: rgb(0 0 0 / 20%); }
 
-.player.is-legal { cursor: pointer; }
+.player { position: relative; }
 
 .health {
   height: 8px;
@@ -138,6 +138,7 @@ input, select {
 .row, .hand { display: flex; gap: 0.55rem; overflow-x: auto; padding-bottom: 0.2rem; }
 
 .card {
+  position: relative;
   width: 148px;
   min-height: 196px;
   flex: 0 0 auto;
@@ -153,7 +154,40 @@ input, select {
 }
 
 button.card { cursor: pointer; }
-button.card.is-legal { outline: 2px solid var(--accent); }
+
+.is-legal {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+button.is-legal { cursor: pointer; }
+
+.hint-mark {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1b1408;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.player .hint-mark {
+  position: static;
+  justify-self: start;
+}
+
+.hint-bar {
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
 
 .card img {
   width: 100%;

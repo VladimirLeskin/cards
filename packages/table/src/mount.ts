@@ -1,5 +1,6 @@
 import { createEngine, SetupError } from "@deckforge/engine";
 import type { CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match } from "@deckforge/engine";
+import { actionHint, actionMark, setupHint } from "./hints";
 
 export interface TableTheme {
   felt: string;
@@ -63,6 +64,7 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   const renderSetup = () => {
     const screen = el("section", "setup");
     screen.append(el("h1", undefined, config.title), el("p", "lede", config.description));
+    screen.append(hintBar(setupHint(seats.length, config.playerCount)));
     if (error) screen.append(el("p", "error", error));
 
     for (const [index, seat] of seats.entries()) {
@@ -85,7 +87,7 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
 
     const actions = el("div", "setup-actions");
     if (seats.length < config.playerCount.max) {
-      const add = button("Добавить игрока");
+      const add = button("Добавить игрока", "is-legal");
       add.dataset.testid = "add-seat";
       add.addEventListener("click", () => {
         seats = readSeats(root);
@@ -101,14 +103,14 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
       actions.append(add);
     }
     if (seats.length > config.playerCount.min) {
-      const remove = button("Убрать игрока");
+      const remove = button("Убрать игрока", "is-legal");
       remove.addEventListener("click", () => {
         seats = readSeats(root).slice(0, -1);
         paint();
       });
       actions.append(remove);
     }
-    const start = button("Начать партию", "primary");
+    const start = button("Начать партию", "primary is-legal");
     start.dataset.testid = "start-match";
     start.addEventListener("click", () => {
       seats = readSeats(root);
@@ -149,6 +151,10 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     });
     top.append(titles, again);
     screen.append(top);
+    if (!view.outcome) {
+      const hint = actionHint(view.legalActions);
+      if (hint) screen.append(hintBar(hint));
+    }
     if (error) screen.append(el("p", "error", error));
     if (view.outcome) {
       const banner = el("section", "panel outcome");
@@ -184,8 +190,9 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
       box.append(el("h2", undefined, view.pending.prompt));
       const choices = el("div", "toolbar");
       for (const option of view.pending.options) {
-        const choice = button(option.label, "primary");
+        const choice = button(option.label, "primary is-legal");
         choice.dataset.testid = "choice";
+        choice.dataset.legal = "choose";
         choice.addEventListener("click", () => {
           submit({ type: "choose", playerId: view.pending!.playerId, optionId: option.id });
         });
@@ -212,6 +219,7 @@ function renderPlayers(view: ClientView, submit: (command: Command) => void): HT
     const card = el(heal ? "button" : "article", `player${player.id === view.activePlayerId ? " is-active" : ""}${heal ? " is-legal" : ""}`);
     if (heal && card instanceof HTMLButtonElement) {
       card.type = "button";
+      markLegal(card, heal);
       card.addEventListener("click", () => submit(heal.command));
     }
     card.append(el("strong", undefined, `${player.name} · ${player.heroName}`));
@@ -285,8 +293,9 @@ function renderLog(view: ClientView, submit: (command: Command) => void): HTMLEl
   const tools = el("div", "toolbar");
   for (const action of view.legalActions) {
     if (!isTool(action)) continue;
-    const control = button(action.label, action.command.type === "endTurn" ? "primary" : undefined);
+    const control = button(action.label, action.command.type === "endTurn" ? "primary is-legal" : "is-legal");
     if (action.command.type === "endTurn") control.dataset.testid = "end-turn";
+    control.dataset.legal = action.command.type;
     control.addEventListener("click", () => submit(action.command));
     tools.append(control);
   }
@@ -309,7 +318,10 @@ function cardFace(
   node.dataset.cardId = card.instanceId;
   if (node instanceof HTMLButtonElement) {
     node.type = "button";
-    if (action && submit) node.addEventListener("click", () => submit(action.command));
+    if (action && submit) {
+      markLegal(node, action);
+      node.addEventListener("click", () => submit(action.command));
+    }
   }
   const image = document.createElement("img");
   image.alt = "";
@@ -324,6 +336,21 @@ function cardFace(
   if (bits.length > 0) node.append(el("div", "meta", bits.join(" · ")));
   node.append(el("p", undefined, card.text));
   return node;
+}
+
+function hintBar(text: string): HTMLElement {
+  const bar = el("p", "hint-bar", text);
+  bar.dataset.testid = "action-hint";
+  bar.setAttribute("role", "status");
+  return bar;
+}
+
+function markLegal(node: HTMLElement, action: LegalAction): void {
+  node.dataset.legal = action.command.type;
+  node.title = action.label;
+  node.setAttribute("aria-label", action.label);
+  const mark = actionMark(action.command);
+  if (mark) node.append(el("span", "hint-mark", mark));
 }
 
 function findPlay(actions: LegalAction[], instanceId: string): LegalAction | undefined {
