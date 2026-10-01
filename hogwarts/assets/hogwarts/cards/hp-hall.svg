@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+  <rect width="240" height="340" fill="#6b3a2a"/>
+  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.45"/>
+  <rect x="90" y="112" width="14" height="56" fill="#fff"/><rect x="136" y="112" width="14" height="56" fill="#fff"/><rect x="82" y="102" width="76" height="12" fill="#fff"/>
+  <text x="120" y="228" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#fff">Зал</text>
+</svg>
