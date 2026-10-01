@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -123,6 +123,14 @@ function commitMessage(mode, number) {
 }
 
 function cleanupWorktree() {
+  if (!existsSync(worktree)) {
+    try {
+      git(["worktree", "prune"]);
+    } catch {
+      // Nothing to prune yet.
+    }
+    return;
+  }
   try {
     git(["worktree", "remove", "--force", worktree]);
   } catch {
