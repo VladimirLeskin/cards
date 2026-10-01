@@ -133,6 +133,7 @@ export function projectCard(state: GameState, module: GameModule, instanceId: st
     damage: instance.damage,
     ...(remaining != null ? { remainingHealth: remaining } : {}),
     ...(def.attack != null ? { attack: def.attack } : {}),
+    ...(def.stays ? { stays: true } : {}),
     ...(def.provides ? { provides: def.provides } : {}),
   };
 }

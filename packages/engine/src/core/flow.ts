@@ -129,11 +129,28 @@ export function drawCards(state: GameState, _module: GameModule, playerId: strin
   return drawn;
 }
 
-export function discardFromZone(player: PlayerState, zone: "hand" | "play"): void {
-  while (player.zones[zone].length > 0) {
-    const id = player.zones[zone].pop();
-    if (id) player.zones.discard.push(id);
+export function discardFromZone(
+  player: PlayerState,
+  zone: "hand" | "play",
+  keep?: (instanceId: string) => boolean,
+): void {
+  const staying: string[] = [];
+  const moving = player.zones[zone];
+  player.zones[zone] = [];
+  for (const id of moving) {
+    if (!id) continue;
+    if (keep?.(id)) staying.push(id);
+    else player.zones.discard.push(id);
   }
+  player.zones[zone] = staying;
+}
+
+/** Hand always leaves. Cards marked `stays` remain in front of their owner. */
+export function discardPlayedCards(state: GameState, module: GameModule, player: PlayerState): void {
+  discardFromZone(player, "play", (instanceId) => {
+    const definitionId = state.cards[instanceId]?.definitionId;
+    return definitionId != null && cardDef(module, definitionId).stays === true;
+  });
 }
 
 export function moveCard(from: string[], instanceId: string, to: string[]): boolean {
@@ -174,16 +191,21 @@ export function damagePlayer(
   module: GameModule,
   playerId: string,
   amount: number,
+  message?: string,
 ): void {
   if (amount <= 0 || state.status !== "playing") return;
   const player = state.players[playerId];
   if (!player || player.stunned) return;
   player.health = Math.max(0, player.health - amount);
-  emit(state, "damage", `${player.name} получает ${amount} урона`, { playerId, amount, health: player.health });
+  emit(state, "damage", message ?? `${player.name} получает ${amount} урона`, {
+    playerId,
+    amount,
+    health: player.health,
+  });
   if (player.health === 0 && module.config.mechanics.stunOnZeroHealth) {
     player.stunned = true;
     discardFromZone(player, "hand");
-    discardFromZone(player, "play");
+    discardPlayedCards(state, module, player);
     resetTurnPools(state, module, player);
     emit(state, "stun", `${player.name} оглушён`, { playerId });
   }

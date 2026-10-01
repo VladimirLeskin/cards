@@ -5,6 +5,7 @@ import {
   activePlayer,
   damagePlayer,
   discardFromZone,
+  discardPlayedCards,
   drawCards,
   effectsFor,
   emit,
@@ -60,6 +61,13 @@ export function runUntilBlocked(state: GameState, module: GameModule): void {
     }
 
     if (state.phase.id === "threat") {
+      if (state.phase.step === "brief") {
+        if (activePlayer(state).controller !== "human") {
+          beginAction(state);
+          continue;
+        }
+        return;
+      }
       stepThreat(state, module);
       continue;
     }
@@ -124,6 +132,7 @@ function stepThreat(state: GameState, module: GameModule): void {
       const def = cardDef(module, state.cards[locationId]!.definitionId);
       const effects = effectsFor(def, "onTurnStart");
       if (effects.length > 0) {
+        emit(state, "location", `${def.name} действует в начале хода`, { instanceId: locationId });
         pushEffects(state, effects, {
           controllerId: activePlayer(state).id,
           sourceInstanceId: locationId,
@@ -183,8 +192,10 @@ function stepThreat(state: GameState, module: GameModule): void {
     phase.cursor += 1;
     if (!instanceId || !state.board.enemies.active.includes(instanceId)) return;
     const def = cardDef(module, state.cards[instanceId]!.definitionId);
-    if ((def.attack ?? 0) > 0) {
-      damagePlayer(state, module, activePlayer(state).id, def.attack ?? 0);
+    const attack = def.attack ?? 0;
+    if (attack > 0) {
+      const player = activePlayer(state);
+      damagePlayer(state, module, player.id, attack, `${def.name} бьёт ${player.name} на ${attack}`);
     }
     if (state.status !== "playing") return;
     if (activePlayer(state).stunned) {
@@ -223,16 +234,38 @@ function stepThreat(state: GameState, module: GameModule): void {
       }
     }
     if (state.pending || state.status !== "playing") return;
-    beginAction(state);
+    finishThreat(state);
     return;
   }
 
   if (phase.step === "to-action") {
-    beginAction(state);
+    finishThreat(state);
     return;
   }
 
+  finishThreat(state);
+}
+
+const threatBeat = new Set(["event", "damage", "enemy", "stun", "recover", "location"]);
+
+function finishThreat(state: GameState): void {
+  if (state.status !== "playing" || state.pending) return;
+  if (activePlayer(state).controller === "human" && threatHasBeats(state)) {
+    state.phase = freshPhase("threat", "brief");
+    return;
+  }
   beginAction(state);
+}
+
+function threatHasBeats(state: GameState): boolean {
+  let start = -1;
+  for (let i = state.log.length - 1; i >= 0; i -= 1) {
+    if (state.log[i]?.type === "turn") {
+      start = i;
+      break;
+    }
+  }
+  return state.log.slice(start + 1).some((event) => threatBeat.has(event.type));
 }
 
 function beginAction(state: GameState): void {
@@ -247,7 +280,7 @@ function beginAction(state: GameState): void {
 function stepCleanup(state: GameState, module: GameModule): void {
   const player = activePlayer(state);
   discardFromZone(player, "hand");
-  discardFromZone(player, "play");
+  discardPlayedCards(state, module, player);
   resetTurnPools(state, module, player);
   player.abilityUsedThisTurn = false;
   for (const die of state.items.dice) {

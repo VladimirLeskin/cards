@@ -9,13 +9,14 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.json --noEmit"
+    "test": "vitest run && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@deckforge/engine": "*"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "license": "MIT"
 }

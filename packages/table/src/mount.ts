@@ -1,5 +1,9 @@
+/// <reference path="./env.d.ts" />
 import { createEngine, SetupError } from "@deckforge/engine";
-import type { CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match } from "@deckforge/engine";
+import type { CardDefinition, CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match, PlayerView } from "@deckforge/engine";
+import { captureFlights, flightPlans, keepFlights, launchFlights, visibleCardIds } from "./flight";
+import type { FlightSnapshot } from "./flight";
+import { actionHint, actionMark, setupHint } from "./hints";
 
 export interface TableTheme {
   felt: string;
@@ -41,8 +45,12 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   ];
   let match: Match | null = null;
   let error = "";
+  let flights: FlightSnapshot[] = [];
+  let openDiscardId: string | null = null;
 
   const paint = () => {
+    const landing = flights;
+    flights = [];
     root.replaceChildren();
     root.style.setProperty("--felt", theme.felt);
     root.style.setProperty("--ink", theme.ink);
@@ -50,19 +58,32 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.style.setProperty("--danger", theme.danger);
     root.style.setProperty("--paper", theme.paper);
     if (!match) renderSetup();
-    else renderMatch(match.view());
+    else renderMatch(match.view(), landing);
+    launchFlights(root, landing);
   };
 
   const submit = (command: Command) => {
     if (!match) return;
+    const played = [...root.querySelectorAll<HTMLElement>("[data-zone=play] [data-card-id]")]
+      .map((card) => card.dataset.cardId)
+      .filter((id): id is string => Boolean(id));
+    const planned = flightPlans(command, config.mechanics.buyDestination, played);
+    const captured = captureFlights(root, planned);
     const result = match.submit(command);
     error = result.ok ? "" : (result.error ?? "Ход отклонён");
+    const visible = visibleCardIds(match.view());
+    const kept = new Set(keepFlights(planned, visible).map((flight) => flight.instanceId));
+    flights = result.ok ? captured.filter((flight) => kept.has(flight.instanceId)) : [];
+    for (const flight of captured) {
+      if (!flights.includes(flight)) flight.flyer.remove();
+    }
     paint();
   };
 
   const renderSetup = () => {
     const screen = el("section", "setup");
     screen.append(el("h1", undefined, config.title), el("p", "lede", config.description));
+    screen.append(hintBar(setupHint(seats.length, config.playerCount)));
     if (error) screen.append(el("p", "error", error));
 
     for (const [index, seat] of seats.entries()) {
@@ -76,16 +97,22 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
             config.heroes,
             seat.heroId,
             new Set(seats.filter((_, other) => other !== index).map((other) => other.heroId)),
+            () => {
+              seats = readSeats(root);
+              paint();
+            },
           ),
         ),
         field("Кто ходит", controllerSelect(seat.controller)),
       );
+      const hero = config.heroes.find((item) => item.id === seat.heroId);
+      if (hero) row.append(el("p", "muted deck-note", `Стартовая колода: ${deckLine(config.cards, hero)}`));
       screen.append(row);
     }
 
     const actions = el("div", "setup-actions");
     if (seats.length < config.playerCount.max) {
-      const add = button("Добавить игрока");
+      const add = button("Добавить игрока", "is-legal");
       add.dataset.testid = "add-seat";
       add.addEventListener("click", () => {
         seats = readSeats(root);
@@ -101,14 +128,14 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
       actions.append(add);
     }
     if (seats.length > config.playerCount.min) {
-      const remove = button("Убрать игрока");
+      const remove = button("Убрать игрока", "is-legal");
       remove.addEventListener("click", () => {
         seats = readSeats(root).slice(0, -1);
         paint();
       });
       actions.append(remove);
     }
-    const start = button("Начать партию", "primary");
+    const start = button("Начать партию", "primary is-legal");
     start.dataset.testid = "start-match";
     start.addEventListener("click", () => {
       seats = readSeats(root);
@@ -133,7 +160,9 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.append(screen);
   };
 
-  const renderMatch = (view: ClientView) => {
+  const renderMatch = (view: ClientView, landing: FlightSnapshot[]) => {
+    const arriving = new Set(landing.filter((flight) => flight.zone !== "discard").map((flight) => flight.instanceId));
+    const landingDiscard = new Set(landing.filter((flight) => flight.zone === "discard").map((flight) => flight.playerId));
     const screen = el("section", "match");
     const active = view.players.find((player) => player.id === view.activePlayerId);
     const top = el("header", "topbar");
@@ -145,10 +174,17 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     again.addEventListener("click", () => {
       match = null;
       error = "";
+      openDiscardId = null;
       paint();
     });
     top.append(titles, again);
     screen.append(top);
+    const threat = threatNotes(view);
+    if (!view.outcome) {
+      const hint = actionHint(view.legalActions);
+      if (hint) screen.append(hintBar(hint));
+    }
+    if (threat.length > 0) screen.append(renderThreat(view, threat, submit));
     if (error) screen.append(el("p", "error", error));
     if (view.outcome) {
       const banner = el("section", "panel outcome");
@@ -161,17 +197,39 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     }
 
     const layout = el("div", "layout");
-    layout.append(renderPlayers(view, submit), renderBoard(view, submit), renderLog(view, submit));
+    const struck = new Set(
+      threat.filter((event) => event.type === "damage").map((event) => String(event.payload.playerId ?? "")),
+    );
+    layout.append(
+      renderPlayers(view, submit, { openId: openDiscardId, toggle: toggleDiscard }, struck),
+      renderBoard(view, submit, threat.length > 0),
+      renderLog(view, submit),
+    );
     screen.append(layout);
 
     const activePlayer = active;
+    if (activePlayer) {
+      screen.append(renderPlay(activePlayer, arriving, landingDiscard.has(activePlayer.id), true));
+    }
+    for (const player of view.players) {
+      if (player.id === activePlayer?.id || player.play.length === 0) continue;
+      screen.append(renderPlay(player, arriving, false, false));
+    }
+    if (openDiscardId) {
+      const owner = view.players.find((player) => player.id === openDiscardId);
+      if (owner) screen.append(renderDiscard(owner));
+      else openDiscardId = null;
+    }
     if (activePlayer && Array.isArray(activePlayer.hand)) {
       const zone = el("section", "panel");
       zone.append(el("h2", undefined, `Рука: ${activePlayer.name}`));
       const hand = el("div", "hand");
       hand.dataset.testid = "hand";
+      hand.dataset.zone = "hand";
       for (const card of activePlayer.hand) {
-        hand.append(cardFace(card, findPlay(view.legalActions, card.instanceId), submit));
+        const face = cardFace(card, findPlay(view.legalActions, card.instanceId), submit);
+        if (arriving.has(card.instanceId)) face.classList.add("is-arriving");
+        hand.append(face);
       }
       if (activePlayer.hand.length === 0) hand.append(el("p", "muted", "Рука пуста"));
       zone.append(hand);
@@ -184,8 +242,9 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
       box.append(el("h2", undefined, view.pending.prompt));
       const choices = el("div", "toolbar");
       for (const option of view.pending.options) {
-        const choice = button(option.label, "primary");
+        const choice = button(option.label, "primary is-legal");
         choice.dataset.testid = "choice";
+        choice.dataset.legal = "choose";
         choice.addEventListener("click", () => {
           submit({ type: "choose", playerId: view.pending!.playerId, optionId: option.id });
         });
@@ -199,19 +258,118 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.append(screen);
   };
 
+  function toggleDiscard(playerId: string) {
+    openDiscardId = openDiscardId === playerId ? null : playerId;
+    paint();
+  }
+
+  function renderPlay(player: PlayerView, arrivingIds: Set<string>, landing: boolean, primary: boolean): HTMLElement {
+    const played = el("section", "panel");
+    const head = el("div", "zone-head");
+    head.append(el("h2", undefined, primary ? "В игре" : `В игре: ${player.name}`));
+    if (primary) head.append(discardControl(player, true, landing));
+    played.append(head);
+    const row = el("div", "row");
+    row.dataset.zone = "play";
+    row.dataset.playerId = player.id;
+    if (primary) row.dataset.testid = "in-play";
+    for (const card of player.play) {
+      const face = cardFace(card);
+      if (arrivingIds.has(card.instanceId)) face.classList.add("is-arriving");
+      row.append(face);
+    }
+    if (player.play.length === 0) {
+      row.append(el("p", "muted drop-hint", "Сыгранные карты лежат здесь до конца хода. Карты, которые остаются, переживают ход."));
+    }
+    played.append(row);
+    return played;
+  }
+
+  function renderDiscard(player: PlayerView): HTMLElement {
+    const panel = el("section", "panel");
+    panel.dataset.testid = "discard-list";
+    panel.append(el("h2", undefined, `Сброс: ${player.name}`));
+    if (player.discard.length === 0) {
+      panel.append(el("p", "muted", "В сбросе пусто"));
+      return panel;
+    }
+    const row = el("div", "row discard-list");
+    for (const card of [...player.discard].reverse()) row.append(cardFace(card));
+    panel.append(row);
+    return panel;
+  }
+
+  function discardControl(player: PlayerView, flightTarget: boolean, landing: boolean): HTMLButtonElement {
+    const open = openDiscardId === player.id;
+    const control = button(
+      `Сброс ${player.discard.length}`,
+      `pile${landing ? " is-landing" : ""}${open ? " is-open" : ""}`,
+    );
+    control.dataset.playerId = player.id;
+    control.dataset.testid = flightTarget ? "discard" : "discard-side";
+    if (flightTarget) control.dataset.zone = "discard";
+    control.setAttribute("aria-expanded", open ? "true" : "false");
+    control.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleDiscard(player.id);
+    });
+    return control;
+  }
+
   paint();
 }
 
-function renderPlayers(view: ClientView, submit: (command: Command) => void): HTMLElement {
+function renderThreat(view: ClientView, notes: ClientView["log"], submit: (command: Command) => void): HTMLElement {
+  const panel = el("section", "panel threat");
+  panel.dataset.testid = "threat";
+  panel.append(el("h2", undefined, "Угроза"));
+  const list = el("ul", "threat-list");
+  for (const note of notes) list.append(el("li", undefined, note.message));
+  panel.append(list);
+  const acknowledge = view.legalActions.find((action) => action.command.type === "acknowledge");
+  if (acknowledge) {
+    const next = button(acknowledge.label, "primary is-legal");
+    next.dataset.testid = "acknowledge";
+    next.dataset.legal = "acknowledge";
+    next.addEventListener("click", () => submit(acknowledge.command));
+    panel.append(next);
+  }
+  return panel;
+}
+
+function threatNotes(view: ClientView): ClientView["log"] {
+  if (view.phase.id !== "threat" || view.phase.step !== "brief") return [];
+  let start = -1;
+  for (let i = view.log.length - 1; i >= 0; i -= 1) {
+    if (view.log[i]?.type === "turn") {
+      start = i;
+      break;
+    }
+  }
+  const beats = new Set(["event", "damage", "enemy", "stun", "recover", "location"]);
+  return view.log.slice(start + 1).filter((event) => beats.has(event.type));
+}
+
+function renderPlayers(
+  view: ClientView,
+  submit: (command: Command) => void,
+  discard: { openId: string | null; toggle: (playerId: string) => void },
+  struck: Set<string>,
+): HTMLElement {
   const panel = el("aside", "panel");
   panel.append(el("h2", undefined, "Герои"));
   for (const player of view.players) {
+    const seat = el("div", "hero-seat");
     const heal = view.legalActions.find(
       (action) => action.command.type === "assignHeal" && action.command.targetPlayerId === player.id,
     );
-    const card = el(heal ? "button" : "article", `player${player.id === view.activePlayerId ? " is-active" : ""}${heal ? " is-legal" : ""}`);
+    const card = el(
+      heal ? "button" : "article",
+      `player${player.id === view.activePlayerId ? " is-active" : ""}${heal ? " is-legal" : ""}${struck.has(player.id) ? " is-struck" : ""}`,
+    );
     if (heal && card instanceof HTMLButtonElement) {
       card.type = "button";
+      markLegal(card, heal);
       card.addEventListener("click", () => submit(heal.command));
     }
     card.append(el("strong", undefined, `${player.name} · ${player.heroName}`));
@@ -225,16 +383,22 @@ function renderPlayers(view: ClientView, submit: (command: Command) => void): HT
       .map((resource) => `${resource.name} ${player.pools[resource.id] ?? 0}`)
       .join(" · ");
     card.append(el("span", "meta", pools));
-    card.append(el("span", "muted", `Колода ${player.deckCount} · сброс ${player.discard.length}`));
-    if (player.play.length > 0) {
-      card.append(el("span", "meta", `В игре: ${player.play.map((item) => item.name).join(", ")}`));
-    }
-    panel.append(card);
+    const piles = el("div", "piles");
+    piles.append(el("span", "pile", `Колода ${player.deckCount}`));
+    const open = discard.openId === player.id;
+    const pile = button(`Сброс ${player.discard.length}`, `pile${open ? " is-open" : ""}`);
+    pile.dataset.testid = "discard-side";
+    pile.dataset.playerId = player.id;
+    pile.setAttribute("aria-expanded", open ? "true" : "false");
+    pile.addEventListener("click", () => discard.toggle(player.id));
+    piles.append(pile);
+    seat.append(card, piles);
+    panel.append(seat);
   }
   return panel;
 }
 
-function renderBoard(view: ClientView, submit: (command: Command) => void): HTMLElement {
+function renderBoard(view: ClientView, submit: (command: Command) => void, threat: boolean): HTMLElement {
   const panel = el("main", "panel");
   const locationAttack = view.legalActions.find(
     (action) => action.command.type === "assignAttack" && action.command.target.type === "location",
@@ -253,7 +417,9 @@ function renderBoard(view: ClientView, submit: (command: Command) => void): HTML
         action.command.target.type === "enemy" &&
         action.command.target.instanceId === enemy.instanceId,
     );
-    enemies.append(cardFace(enemy, attack, submit));
+    const face = cardFace(enemy, attack, submit);
+    if (threat) face.classList.add("is-threat");
+    enemies.append(face);
   }
   if (view.enemies.length === 0) enemies.append(el("p", "muted", "Поле чисто"));
   panel.append(enemies);
@@ -261,7 +427,11 @@ function renderBoard(view: ClientView, submit: (command: Command) => void): HTML
   if (view.eventsRevealed.length > 0) {
     panel.append(zoneTitle("События хода", `в колоде ${view.eventDeckCount}`));
     const events = el("div", "row");
-    for (const event of view.eventsRevealed) events.append(cardFace(event));
+    for (const event of view.eventsRevealed) {
+      const face = cardFace(event);
+      if (threat) face.classList.add("is-threat");
+      events.append(face);
+    }
     panel.append(events);
   }
 
@@ -285,8 +455,9 @@ function renderLog(view: ClientView, submit: (command: Command) => void): HTMLEl
   const tools = el("div", "toolbar");
   for (const action of view.legalActions) {
     if (!isTool(action)) continue;
-    const control = button(action.label, action.command.type === "endTurn" ? "primary" : undefined);
+    const control = button(action.label, action.command.type === "endTurn" ? "primary is-legal" : "is-legal");
     if (action.command.type === "endTurn") control.dataset.testid = "end-turn";
+    control.dataset.legal = action.command.type;
     control.addEventListener("click", () => submit(action.command));
     tools.append(control);
   }
@@ -309,7 +480,10 @@ function cardFace(
   node.dataset.cardId = card.instanceId;
   if (node instanceof HTMLButtonElement) {
     node.type = "button";
-    if (action && submit) node.addEventListener("click", () => submit(action.command));
+    if (action && submit) {
+      markLegal(node, action);
+      node.addEventListener("click", () => submit(action.command));
+    }
   }
   const image = document.createElement("img");
   image.alt = "";
@@ -319,11 +493,27 @@ function cardFace(
     card.cost != null ? `цена ${card.cost}` : "",
     card.remainingHealth != null ? `жизнь ${card.remainingHealth}/${card.health}` : "",
     card.attack != null ? `атака ${card.attack}` : "",
+    card.stays ? "остаётся" : "",
   ].filter(Boolean);
   node.append(image, title);
   if (bits.length > 0) node.append(el("div", "meta", bits.join(" · ")));
   node.append(el("p", undefined, card.text));
   return node;
+}
+
+function hintBar(text: string): HTMLElement {
+  const bar = el("p", "hint-bar", text);
+  bar.dataset.testid = "action-hint";
+  bar.setAttribute("role", "status");
+  return bar;
+}
+
+function markLegal(node: HTMLElement, action: LegalAction): void {
+  node.dataset.legal = action.command.type;
+  node.title = action.label;
+  node.setAttribute("aria-label", action.label);
+  const mark = actionMark(action.command);
+  if (mark) node.append(el("span", "hint-mark", mark));
 }
 
 function findPlay(actions: LegalAction[], instanceId: string): LegalAction | undefined {
@@ -346,9 +536,15 @@ function zoneTitle(title: string, note: string): HTMLElement {
   return head;
 }
 
-function heroSelect(heroes: HeroDefinition[], selected: string, taken: Set<string>): HTMLSelectElement {
+function heroSelect(
+  heroes: HeroDefinition[],
+  selected: string,
+  taken: Set<string>,
+  onChange: () => void,
+): HTMLSelectElement {
   const select = document.createElement("select");
   select.dataset.field = "hero";
+  select.addEventListener("change", onChange);
   for (const hero of heroes) {
     const option = document.createElement("option");
     option.value = hero.id;
@@ -371,6 +567,15 @@ function controllerSelect(selected: SeatDraft["controller"]): HTMLSelectElement 
     select.append(option);
   }
   return select;
+}
+
+function deckLine(cards: CardDefinition[], hero: HeroDefinition): string {
+  return hero.startingDeck
+    .map((entry) => {
+      const name = cards.find((card) => card.id === entry.definitionId)?.name ?? entry.definitionId;
+      return `${entry.count}× ${name}`;
+    })
+    .join(", ");
 }
 
 function field(label: string, control: HTMLElement): HTMLLabelElement {

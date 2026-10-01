@@ -5,6 +5,7 @@ import {
   applyDamageToLocation,
   damagePlayer,
   discardFromZone,
+  discardPlayedCards,
   drawCards,
   emit,
   finishGame,
@@ -318,7 +319,7 @@ function forceStun(state: GameState, module: GameModule, playerId: string): void
   player.health = 0;
   player.stunned = true;
   discardFromZone(player, "hand");
-  discardFromZone(player, "play");
+  discardPlayedCards(state, module, player);
   resetTurnPools(state, module, player);
   emit(state, "stun", `${player.name} оглушён`, { playerId });
   if (

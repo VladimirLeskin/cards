@@ -4,7 +4,7 @@
   "type": "module",
   "workspaces": ["packages/*", "apps/*"],
   "scripts": {
-    "test": "npm test --workspaces --if-present",
+    "test": "node --test scripts/publish-pages.test.mjs && npm test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "demo": "npm run demo --workspace @deckforge/hogwarts && npm run demo --workspace @deckforge/anatomy-park",
     "dev:hogwarts": "npm run dev --workspace @deckforge/hogwarts",

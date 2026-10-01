@@ -46,6 +46,8 @@ function scoreAction(state: GameState, module: GameModule, action: LegalAction):
     }
     case "buyCard":
       return scoreBuy(state, module, command.instanceId);
+    case "acknowledge":
+      return 1_000;
     case "endTurn":
       return 0;
     default: {

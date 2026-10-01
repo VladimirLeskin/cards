@@ -89,6 +89,8 @@ export interface CardDefinition {
   cost?: number;
   health?: number;
   attack?: number;
+  /** Stays in the owner's play zone when the turn cleans up. */
+  stays?: boolean;
   /** Enemies revealed when this location becomes active. */
   enemyCount?: number;
   /** Event cards drawn on a turn while this location is active. */
@@ -351,6 +353,7 @@ export type Command =
   | { type: "spendToken"; playerId: string; tokenId: string }
   | { type: "useProp"; playerId: string; propId: string }
   | { type: "endTurn"; playerId: string }
+  | { type: "acknowledge"; playerId: string }
   | { type: "choose"; playerId: string; optionId: string };
 
 export interface LegalAction {
@@ -371,6 +374,7 @@ export interface CardView {
   damage: number;
   remainingHealth?: number;
   attack?: number;
+  stays?: boolean;
   provides?: ResourceGain[];
 }
 

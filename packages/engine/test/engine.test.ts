@@ -45,10 +45,11 @@ describe("партия", () => {
       const played = match.submit({ type: "playCard", playerId: "p1", instanceId });
       expect(played.ok).toBe(true);
     }
-    const strike = match.legalActions("p1").find((action) => action.command.type === "assignAttack");
-    expect(strike).toBeTruthy();
-    const result = match.submit(strike!.command);
-    expect(result.ok).toBe(true);
+    for (let step = 0; step < 3; step += 1) {
+      const strike = match.legalActions("p1").find((action) => action.command.type === "assignAttack");
+      expect(strike?.command).toMatchObject({ type: "assignAttack", amount: 1 });
+      expect(match.submit(strike!.command).ok).toBe(true);
+    }
     expect(match.getState().status).toBe("won");
     expect(match.getState().outcome?.reason).toBe("all-locations-cleared");
   });
@@ -100,6 +101,80 @@ describe("партия", () => {
     expect(stolen.error).toBe("Illegal action");
     expect(match.submit({ type: "endTurn", playerId: "p2" }).ok).toBe(true);
     expect(match.getState().turn).toBe(2);
+  });
+
+  it("тратит атаку по одной и может разделить её", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.piles.enemies = ["brute"];
+        config.cards.find((card) => card.id === "brute")!.health = 1;
+        config.cards.find((card) => card.id === "gate")!.health = 5;
+        config.cards.find((card) => card.id === "gate")!.enemyCount = 1;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
+    const hand = [...match.getState().players.p1!.zones.hand];
+    for (const instanceId of hand.slice(0, 2)) {
+      expect(match.submit({ type: "playCard", playerId: "p1", instanceId }).ok).toBe(true);
+    }
+    const actions = match.legalActions("p1").filter((action) => action.command.type === "assignAttack");
+    expect(actions.map((action) => action.command)).toEqual([
+      { type: "assignAttack", playerId: "p1", target: { type: "enemy", instanceId: expect.any(String) }, amount: 1 },
+      { type: "assignAttack", playerId: "p1", target: { type: "location" }, amount: 1 },
+    ]);
+    const dumped = match.submit({
+      type: "assignAttack",
+      playerId: "p1",
+      target: { type: "location" },
+      amount: 2,
+    });
+    expect(dumped.ok).toBe(false);
+    const enemy = actions[0]!.command;
+    const location = actions[1]!.command;
+    expect(match.submit(enemy).ok).toBe(true);
+    expect(match.getState().board.enemies.active).toHaveLength(0);
+    expect(match.submit(location).ok).toBe(true);
+    const locationId = match.getState().board.locations.active!;
+    expect(match.getState().cards[locationId]?.damage).toBe(1);
+    expect(match.getState().players.p1?.pools.attack).toBe(0);
+  });
+
+  it("оставляет карту stays в игре после конца хода", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.cards.push({
+          id: "ally",
+          name: "Союзник",
+          kind: "starter",
+          text: "Остаётся в игре.",
+          image: "assets/fixture/starter.svg",
+          tags: ["ally"],
+          stays: true,
+        });
+        config.heroes[0]!.startingDeck = [
+          { definitionId: "ally", count: 1 },
+          { definitionId: "spark", count: 4 },
+        ];
+        config.cards.find((card) => card.id === "gate")!.health = 30;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    const allyId = match
+      .getState()
+      .players.p1!.zones.hand.find((id) => match.getState().cards[id]?.definitionId === "ally");
+    expect(allyId).toBeTruthy();
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: allyId! }).ok).toBe(true);
+    expect(match.submit({ type: "endTurn", playerId: "p1" }).ok).toBe(true);
+    const after = match.getState().players.p1!;
+    expect(after.zones.play).toEqual([allyId]);
+    expect(after.zones.hand.map((id) => match.getState().cards[id]?.definitionId)).toEqual([
+      "spark",
+      "spark",
+      "spark",
+      "spark",
+    ]);
+    expect(after.zones.discard.some((id) => match.getState().cards[id]?.definitionId === "ally")).toBe(false);
   });
 
   it("прячет порядок колоды и чужую руку, если так сказано в конфиге", () => {
@@ -158,6 +233,8 @@ describe("партия", () => {
     expect(chosen.ok).toBe(true);
     expect(match.getState().pending).toBeNull();
     expect(match.getState().players.p1?.pools.attack).toBe(1);
+    expect(match.getState().phase).toMatchObject({ id: "threat", step: "brief" });
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
     expect(match.getState().phase.id).toBe("action");
   });
 
@@ -185,6 +262,8 @@ describe("партия", () => {
       { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
     );
     expect(match.getState().players.p1?.pools.coins).toBe(1);
+    expect(match.getState().phase.step).toBe("brief");
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
     expect(match.submit({ type: "endTurn", playerId: "p1" }).ok).toBe(true);
     expect(match.getState().status).toBe("playing");
     expect(match.getState().players.p1?.pools.coins).toBe(1);
@@ -283,6 +362,60 @@ describe("партия", () => {
     expect(match.submit({ type: "spendToken", playerId: "p1", tokenId: "chip" }).ok).toBe(true);
     expect(match.getState().players.p1?.pools.attack).toBe(4);
     expect(match.getState().items.tokens.chip?.holders.p1).toBe(0);
+  });
+
+  it("показывает угрозу человеку и пускает к действиям", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.mechanics.eventsPerTurn = 1;
+        config.piles.events = ["boom"];
+        config.piles.enemies = ["brute"];
+        config.cards.find((card) => card.id === "gate")!.enemyCount = 1;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    const state = match.getState();
+    expect(state.phase).toMatchObject({ id: "threat", step: "brief" });
+    expect(state.players.p1?.health).toBe(8);
+    expect(state.log.some((event) => event.message === "Событие: Удар")).toBe(true);
+    expect(state.log.some((event) => event.message === "Громила бьёт Ада на 1")).toBe(true);
+    expect(match.legalActions("p1").map((action) => action.command.type)).toEqual(["acknowledge"]);
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: state.players.p1!.zones.hand[0]! }).ok).toBe(false);
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
+    expect(match.getState().phase.id).toBe("action");
+  });
+
+  it("лечит по одной единице", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.cards.push({
+          id: "salve",
+          name: "Мазь",
+          kind: "starter",
+          text: "2 лечения.",
+          image: "assets/fixture/starter.svg",
+          tags: [],
+          provides: [{ resource: "heal", amount: 2 }],
+        });
+        config.heroes[0]!.startingDeck = [
+          { definitionId: "salve", count: 1 },
+          { definitionId: "spark", count: 4 },
+        ];
+        config.heroes[0]!.health = 6;
+        config.mechanics.eventsPerTurn = 1;
+        config.piles.events = ["boom"];
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    expect(match.submit({ type: "acknowledge", playerId: "p1" }).ok).toBe(true);
+    const salve = match.getState().players.p1!.zones.hand.find((id) => match.getState().cards[id]?.definitionId === "salve");
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: salve! }).ok).toBe(true);
+    const heal = match.legalActions("p1").find((action) => action.command.type === "assignHeal");
+    expect(heal?.command).toMatchObject({ type: "assignHeal", amount: 1 });
+    expect(match.submit({ type: "assignHeal", playerId: "p1", targetPlayerId: "p1", amount: 2 }).ok).toBe(false);
+    expect(match.submit(heal!.command).ok).toBe(true);
+    expect(match.getState().players.p1?.health).toBe(6);
+    expect(match.getState().players.p1?.pools.heal).toBe(1);
   });
 
   it("отклоняет конфиг без обработчика", () => {

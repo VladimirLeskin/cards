@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+  <rect width="240" height="340" fill="#6b4a2a"/>
+  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.45"/>
+  <circle cx="120" cy="114" r="16" fill="#fff"/><path d="M96 168 v-16 q0-16 24-16 t24 16 v16 z" fill="#fff"/>
+  <text x="120" y="228" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#fff">Союзник</text>
+</svg>

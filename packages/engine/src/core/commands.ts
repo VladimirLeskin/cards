@@ -39,6 +39,13 @@ export function executeCommand(state: GameState, module: GameModule, command: Co
     case "useProp":
       useProp(state, module, command.playerId, command.propId);
       return;
+    case "acknowledge": {
+      const player = state.players[command.playerId];
+      state.phase = player?.stunned
+        ? { id: "cleanup", step: "begin", cursor: 0, queue: [] }
+        : { id: "action", step: "play", cursor: 0, queue: [] };
+      return;
+    }
     case "endTurn":
       state.phase = { id: "cleanup", step: "begin", cursor: 0, queue: [] };
       emit(state, "endTurn", `${state.players[command.playerId]?.name ?? "Игрок"} заканчивает ход`, {
