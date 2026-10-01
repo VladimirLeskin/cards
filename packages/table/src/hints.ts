@@ -3,7 +3,7 @@ import type { Command, LegalAction } from "@deckforge/engine";
 const groups: { type: Command["type"]; text: string }[] = [
   { type: "playCard", text: "карты в руке" },
   { type: "buyCard", text: "карты на рынке" },
-  { type: "assignAttack", text: "цели атаки" },
+  { type: "assignAttack", text: "цели атаки, по 1 за нажатие" },
   { type: "assignHeal", text: "героев для лечения" },
   { type: "activateAbility", text: "способность" },
   { type: "rollDie", text: "кубик" },
@@ -28,7 +28,7 @@ export function actionHint(actions: LegalAction[]): string {
 export function actionMark(command: Command): string {
   if (command.type === "playCard") return "сыграть";
   if (command.type === "buyCard") return "купить";
-  if (command.type === "assignAttack") return "атака";
+  if (command.type === "assignAttack") return "атака 1";
   if (command.type === "assignHeal") return "лечение";
   return "";
 }

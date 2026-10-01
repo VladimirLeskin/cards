@@ -5,6 +5,7 @@ import {
   activePlayer,
   damagePlayer,
   discardFromZone,
+  discardPlayedCards,
   drawCards,
   effectsFor,
   emit,
@@ -247,7 +248,7 @@ function beginAction(state: GameState): void {
 function stepCleanup(state: GameState, module: GameModule): void {
   const player = activePlayer(state);
   discardFromZone(player, "hand");
-  discardFromZone(player, "play");
+  discardPlayedCards(state, module, player);
   resetTurnPools(state, module, player);
   player.abilityUsedThisTurn = false;
   for (const die of state.items.dice) {

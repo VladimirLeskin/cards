@@ -27,6 +27,7 @@ export type {
   MechanicsConfig,
   PlayerSetup,
   PlayerState,
+  PlayerView,
   PropDefinition,
   ResourceDefinition,
   Side,

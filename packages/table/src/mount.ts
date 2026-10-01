@@ -1,5 +1,6 @@
+/// <reference path="./env.d.ts" />
 import { createEngine, SetupError } from "@deckforge/engine";
-import type { CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match } from "@deckforge/engine";
+import type { CardDefinition, CardView, ClientView, Command, GameModule, HeroDefinition, LegalAction, Match, PlayerView } from "@deckforge/engine";
 import { captureFlights, flightPlans, keepFlights, launchFlights, visibleCardIds } from "./flight";
 import type { FlightSnapshot } from "./flight";
 import { actionHint, actionMark, setupHint } from "./hints";
@@ -45,6 +46,7 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
   let match: Match | null = null;
   let error = "";
   let flights: FlightSnapshot[] = [];
+  let openDiscardId: string | null = null;
 
   const paint = () => {
     const landing = flights;
@@ -95,10 +97,16 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
             config.heroes,
             seat.heroId,
             new Set(seats.filter((_, other) => other !== index).map((other) => other.heroId)),
+            () => {
+              seats = readSeats(root);
+              paint();
+            },
           ),
         ),
         field("Кто ходит", controllerSelect(seat.controller)),
       );
+      const hero = config.heroes.find((item) => item.id === seat.heroId);
+      if (hero) row.append(el("p", "muted deck-note", `Стартовая колода: ${deckLine(config.cards, hero)}`));
       screen.append(row);
     }
 
@@ -166,6 +174,7 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     again.addEventListener("click", () => {
       match = null;
       error = "";
+      openDiscardId = null;
       paint();
     });
     top.append(titles, again);
@@ -186,37 +195,25 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     }
 
     const layout = el("div", "layout");
-    layout.append(renderPlayers(view, submit), renderBoard(view, submit), renderLog(view, submit));
+    layout.append(
+      renderPlayers(view, submit, { openId: openDiscardId, toggle: toggleDiscard }),
+      renderBoard(view, submit),
+      renderLog(view, submit),
+    );
     screen.append(layout);
 
     const activePlayer = active;
     if (activePlayer) {
-      const played = el("section", "panel");
-      const head = el("div", "zone-head");
-      head.append(el("h2", undefined, "В игре"));
-      const discard = el(
-        "span",
-        `pile${landingDiscard.has(activePlayer.id) ? " is-landing" : ""}`,
-        `Сброс ${activePlayer.discard.length}`,
-      );
-      discard.dataset.zone = "discard";
-      discard.dataset.playerId = activePlayer.id;
-      head.append(discard);
-      played.append(head);
-      const row = el("div", "row");
-      row.dataset.zone = "play";
-      row.dataset.playerId = activePlayer.id;
-      row.dataset.testid = "in-play";
-      for (const card of activePlayer.play) {
-        const face = cardFace(card);
-        if (arriving.has(card.instanceId)) face.classList.add("is-arriving");
-        row.append(face);
-      }
-      if (activePlayer.play.length === 0) {
-        row.append(el("p", "muted drop-hint", "Сыгранные карты остаются здесь до конца хода"));
-      }
-      played.append(row);
-      screen.append(played);
+      screen.append(renderPlay(activePlayer, arriving, landingDiscard.has(activePlayer.id), true));
+    }
+    for (const player of view.players) {
+      if (player.id === activePlayer?.id || player.play.length === 0) continue;
+      screen.append(renderPlay(player, arriving, false, false));
+    }
+    if (openDiscardId) {
+      const owner = view.players.find((player) => player.id === openDiscardId);
+      if (owner) screen.append(renderDiscard(owner));
+      else openDiscardId = null;
     }
     if (activePlayer && Array.isArray(activePlayer.hand)) {
       const zone = el("section", "panel");
@@ -256,13 +253,76 @@ export function mountGame(root: HTMLElement, options: { module: GameModule; them
     root.append(screen);
   };
 
+  function toggleDiscard(playerId: string) {
+    openDiscardId = openDiscardId === playerId ? null : playerId;
+    paint();
+  }
+
+  function renderPlay(player: PlayerView, arrivingIds: Set<string>, landing: boolean, primary: boolean): HTMLElement {
+    const played = el("section", "panel");
+    const head = el("div", "zone-head");
+    head.append(el("h2", undefined, primary ? "В игре" : `В игре: ${player.name}`));
+    if (primary) head.append(discardControl(player, true, landing));
+    played.append(head);
+    const row = el("div", "row");
+    row.dataset.zone = "play";
+    row.dataset.playerId = player.id;
+    if (primary) row.dataset.testid = "in-play";
+    for (const card of player.play) {
+      const face = cardFace(card);
+      if (arrivingIds.has(card.instanceId)) face.classList.add("is-arriving");
+      row.append(face);
+    }
+    if (player.play.length === 0) {
+      row.append(el("p", "muted drop-hint", "Сыгранные карты лежат здесь до конца хода. Карты, которые остаются, переживают ход."));
+    }
+    played.append(row);
+    return played;
+  }
+
+  function renderDiscard(player: PlayerView): HTMLElement {
+    const panel = el("section", "panel");
+    panel.dataset.testid = "discard-list";
+    panel.append(el("h2", undefined, `Сброс: ${player.name}`));
+    if (player.discard.length === 0) {
+      panel.append(el("p", "muted", "В сбросе пусто"));
+      return panel;
+    }
+    const row = el("div", "row discard-list");
+    for (const card of [...player.discard].reverse()) row.append(cardFace(card));
+    panel.append(row);
+    return panel;
+  }
+
+  function discardControl(player: PlayerView, flightTarget: boolean, landing: boolean): HTMLButtonElement {
+    const open = openDiscardId === player.id;
+    const control = button(
+      `Сброс ${player.discard.length}`,
+      `pile${landing ? " is-landing" : ""}${open ? " is-open" : ""}`,
+    );
+    control.dataset.playerId = player.id;
+    control.dataset.testid = flightTarget ? "discard" : "discard-side";
+    if (flightTarget) control.dataset.zone = "discard";
+    control.setAttribute("aria-expanded", open ? "true" : "false");
+    control.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleDiscard(player.id);
+    });
+    return control;
+  }
+
   paint();
 }
 
-function renderPlayers(view: ClientView, submit: (command: Command) => void): HTMLElement {
+function renderPlayers(
+  view: ClientView,
+  submit: (command: Command) => void,
+  discard: { openId: string | null; toggle: (playerId: string) => void },
+): HTMLElement {
   const panel = el("aside", "panel");
   panel.append(el("h2", undefined, "Герои"));
   for (const player of view.players) {
+    const seat = el("div", "hero-seat");
     const heal = view.legalActions.find(
       (action) => action.command.type === "assignHeal" && action.command.targetPlayerId === player.id,
     );
@@ -285,9 +345,15 @@ function renderPlayers(view: ClientView, submit: (command: Command) => void): HT
     card.append(el("span", "meta", pools));
     const piles = el("div", "piles");
     piles.append(el("span", "pile", `Колода ${player.deckCount}`));
-    piles.append(el("span", "pile", `Сброс ${player.discard.length}`));
-    card.append(piles);
-    panel.append(card);
+    const open = discard.openId === player.id;
+    const pile = button(`Сброс ${player.discard.length}`, `pile${open ? " is-open" : ""}`);
+    pile.dataset.testid = "discard-side";
+    pile.dataset.playerId = player.id;
+    pile.setAttribute("aria-expanded", open ? "true" : "false");
+    pile.addEventListener("click", () => discard.toggle(player.id));
+    piles.append(pile);
+    seat.append(card, piles);
+    panel.append(seat);
   }
   return panel;
 }
@@ -381,6 +447,7 @@ function cardFace(
     card.cost != null ? `цена ${card.cost}` : "",
     card.remainingHealth != null ? `жизнь ${card.remainingHealth}/${card.health}` : "",
     card.attack != null ? `атака ${card.attack}` : "",
+    card.stays ? "остаётся" : "",
   ].filter(Boolean);
   node.append(image, title);
   if (bits.length > 0) node.append(el("div", "meta", bits.join(" · ")));
@@ -423,9 +490,15 @@ function zoneTitle(title: string, note: string): HTMLElement {
   return head;
 }
 
-function heroSelect(heroes: HeroDefinition[], selected: string, taken: Set<string>): HTMLSelectElement {
+function heroSelect(
+  heroes: HeroDefinition[],
+  selected: string,
+  taken: Set<string>,
+  onChange: () => void,
+): HTMLSelectElement {
   const select = document.createElement("select");
   select.dataset.field = "hero";
+  select.addEventListener("change", onChange);
   for (const hero of heroes) {
     const option = document.createElement("option");
     option.value = hero.id;
@@ -448,6 +521,15 @@ function controllerSelect(selected: SeatDraft["controller"]): HTMLSelectElement 
     select.append(option);
   }
   return select;
+}
+
+function deckLine(cards: CardDefinition[], hero: HeroDefinition): string {
+  return hero.startingDeck
+    .map((entry) => {
+      const name = cards.find((card) => card.id === entry.definitionId)?.name ?? entry.definitionId;
+      return `${entry.count}× ${name}`;
+    })
+    .join(", ");
 }
 
 function field(label: string, control: HTMLElement): HTMLLabelElement {

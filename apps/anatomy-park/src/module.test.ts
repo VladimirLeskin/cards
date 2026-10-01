@@ -10,6 +10,14 @@ describe("Анатомический парк", () => {
     expect(anatomyParkModule.config.props.map((prop) => prop.id)).toEqual(["portal-gun"]);
     expect(anatomyParkModule.config.tokens.map((token) => token.id)).toEqual(["sample"]);
     expect(anatomyParkModule.config.resources.find((resource) => resource.role === "currency")?.id).toBe("samples");
+    const decks = anatomyParkModule.config.heroes.map((hero) => JSON.stringify(hero.startingDeck));
+    expect(new Set(decks).size).toBe(anatomyParkModule.config.heroes.length);
+    const entrance = anatomyParkModule.config.cards.find((card) => card.id === "ap-entrance");
+    const core = anatomyParkModule.config.cards.find((card) => card.id === "ap-core");
+    expect(core?.enemyCount).toBeGreaterThan(entrance?.enemyCount ?? 0);
+    expect(core?.eventCount).toBeGreaterThan(entrance?.eventCount ?? 0);
+    expect(core?.effects?.some((block) => block.trigger === "onTurnStart")).toBe(true);
+    expect(anatomyParkModule.config.cards.find((card) => card.id === "ap-intern")?.stays).toBe(true);
 
     const match = createEngine([anatomyParkModule]).createMatch({
       gameId: "anatomy-park",

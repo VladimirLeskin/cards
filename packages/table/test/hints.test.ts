@@ -29,7 +29,7 @@ describe("action hints", () => {
   it("badges cards and heroes with a short verb", () => {
     expect(actionMark({ type: "playCard", playerId: "p1", instanceId: "c1" })).toBe("сыграть");
     expect(actionMark({ type: "buyCard", playerId: "p1", instanceId: "c1" })).toBe("купить");
-    expect(actionMark({ type: "assignAttack", playerId: "p1", target: { type: "location" }, amount: 1 })).toBe("атака");
+    expect(actionMark({ type: "assignAttack", playerId: "p1", target: { type: "location" }, amount: 1 })).toBe("атака 1");
     expect(actionMark({ type: "assignHeal", playerId: "p1", targetPlayerId: "p1", amount: 1 })).toBe("лечение");
     expect(actionMark({ type: "endTurn", playerId: "p1" })).toBe("");
   });

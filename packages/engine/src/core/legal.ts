@@ -86,11 +86,10 @@ export function legalActions(state: GameState, module: GameModule, playerId: str
     for (const instanceId of state.board.enemies.active) {
       const left = remainingHealth(state, module, instanceId);
       if (left <= 0) continue;
-      const amount = Math.min(attackPool, left);
       const def = cardDef(module, state.cards[instanceId]!.definitionId);
       actions.push({
-        command: { type: "assignAttack", playerId, target: { type: "enemy", instanceId }, amount },
-        label: `Атака ${amount} → ${def.name}`,
+        command: { type: "assignAttack", playerId, target: { type: "enemy", instanceId }, amount: 1 },
+        label: `Атака 1 → ${def.name}`,
       });
     }
     const locationId = state.board.locations.active;
@@ -101,11 +100,10 @@ export function legalActions(state: GameState, module: GameModule, playerId: str
     if (locationId && locationOpen) {
       const left = remainingHealth(state, module, locationId);
       if (left > 0) {
-        const amount = Math.min(attackPool, left);
         const def = cardDef(module, state.cards[locationId]!.definitionId);
         actions.push({
-          command: { type: "assignAttack", playerId, target: { type: "location" }, amount },
-          label: `Атака ${amount} → ${def.name}`,
+          command: { type: "assignAttack", playerId, target: { type: "location" }, amount: 1 },
+          label: `Атака 1 → ${def.name}`,
         });
       }
     }

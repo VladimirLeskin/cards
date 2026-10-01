@@ -90,10 +90,11 @@ const cards: CardDefinition[] = [
     id: "ap-intern",
     name: "Стажёр",
     kind: "market",
-    text: "Возьмите карту и получите жетон образца.",
+    text: "Возьмите карту и получите жетон образца. Остаётся в игре.",
     image: `${art}/market.svg`,
     tags: ["ally"],
     cost: 4,
+    stays: true,
     effects: [
       {
         trigger: "onPlay",
@@ -175,13 +176,14 @@ const cards: CardDefinition[] = [
     id: "ap-core",
     name: "Ядро аттракциона",
     kind: "location",
-    text: "Финальный сектор.",
+    text: "Два паразита. Два осложнения за ход. В начале хода активный герой получает 1 урон.",
     image: `${art}/location.svg`,
     tags: ["sector"],
-    health: 16,
-    enemyCount: 1,
-    eventCount: 1,
+    health: 18,
+    enemyCount: 2,
+    eventCount: 2,
     maxEnemies: 3,
+    effects: [{ trigger: "onTurnStart", effects: [{ op: "damagePlayer", amount: 1, target: "current" }] }],
   },
   {
     id: "ap-spasm",
@@ -233,11 +235,13 @@ const cards: CardDefinition[] = [
   },
 ];
 
-const startingDeck = [
-  { definitionId: "ap-swipe", count: 4 },
-  { definitionId: "ap-vial", count: 3 },
-  { definitionId: "ap-bandage", count: 2 },
-];
+function deck(swipe: number, vial: number, bandage: number) {
+  return [
+    { definitionId: "ap-swipe", count: swipe },
+    { definitionId: "ap-vial", count: vial },
+    { definitionId: "ap-bandage", count: bandage },
+  ];
+}
 
 const heroes: HeroDefinition[] = [
   {
@@ -254,7 +258,7 @@ const heroes: HeroDefinition[] = [
         { op: "gain", resource: "samples", amount: 1 },
       ],
     },
-    startingDeck,
+    startingDeck: deck(6, 2, 1),
   },
   {
     id: "morty",
@@ -267,7 +271,7 @@ const heroes: HeroDefinition[] = [
       usage: "oncePerTurn",
       effects: [{ op: "draw", amount: 1 }],
     },
-    startingDeck,
+    startingDeck: deck(3, 3, 3),
   },
   {
     id: "summer",
@@ -280,7 +284,7 @@ const heroes: HeroDefinition[] = [
       usage: "oncePerTurn",
       effects: [{ op: "custom", id: "dissect" }],
     },
-    startingDeck,
+    startingDeck: deck(2, 6, 1),
   },
   {
     id: "beth",
@@ -293,7 +297,7 @@ const heroes: HeroDefinition[] = [
       usage: "passive",
       effects: [{ op: "heal", amount: 1, target: "current" }],
     },
-    startingDeck,
+    startingDeck: deck(4, 4, 1),
   },
 ];
 

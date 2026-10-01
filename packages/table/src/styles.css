@@ -66,6 +66,8 @@ h1, h2 {
   border-radius: 12px;
 }
 
+.deck-note { grid-column: 1 / -1; margin: 0; }
+
 .seat label, .field { display: grid; gap: 0.25rem; font-size: 0.8rem; }
 
 input, select {
@@ -205,11 +207,27 @@ button.is-legal { cursor: pointer; }
 
 .piles { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 
+.hero-seat { display: grid; gap: 0.35rem; }
+
 .pile {
   padding: 0.15rem 0.45rem;
   border-radius: 8px;
   border: 1px dashed color-mix(in srgb, var(--ink) 40%, transparent);
 }
+
+button.pile {
+  border-radius: 8px;
+  padding: 0.15rem 0.45rem;
+}
+
+button.pile.is-open {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.discard-list { flex-wrap: nowrap; overflow-x: auto; }
+.discard-list .card { width: 150px; flex: none; }
 
 .pile.is-landing,
 .pile.is-landed {

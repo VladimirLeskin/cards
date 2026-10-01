@@ -45,10 +45,11 @@ describe("партия", () => {
       const played = match.submit({ type: "playCard", playerId: "p1", instanceId });
       expect(played.ok).toBe(true);
     }
-    const strike = match.legalActions("p1").find((action) => action.command.type === "assignAttack");
-    expect(strike).toBeTruthy();
-    const result = match.submit(strike!.command);
-    expect(result.ok).toBe(true);
+    for (let step = 0; step < 3; step += 1) {
+      const strike = match.legalActions("p1").find((action) => action.command.type === "assignAttack");
+      expect(strike?.command).toMatchObject({ type: "assignAttack", amount: 1 });
+      expect(match.submit(strike!.command).ok).toBe(true);
+    }
     expect(match.getState().status).toBe("won");
     expect(match.getState().outcome?.reason).toBe("all-locations-cleared");
   });
@@ -100,6 +101,79 @@ describe("партия", () => {
     expect(stolen.error).toBe("Illegal action");
     expect(match.submit({ type: "endTurn", playerId: "p2" }).ok).toBe(true);
     expect(match.getState().turn).toBe(2);
+  });
+
+  it("тратит атаку по одной и может разделить её", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.piles.enemies = ["brute"];
+        config.cards.find((card) => card.id === "brute")!.health = 1;
+        config.cards.find((card) => card.id === "gate")!.health = 5;
+        config.cards.find((card) => card.id === "gate")!.enemyCount = 1;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    const hand = [...match.getState().players.p1!.zones.hand];
+    for (const instanceId of hand.slice(0, 2)) {
+      expect(match.submit({ type: "playCard", playerId: "p1", instanceId }).ok).toBe(true);
+    }
+    const actions = match.legalActions("p1").filter((action) => action.command.type === "assignAttack");
+    expect(actions.map((action) => action.command)).toEqual([
+      { type: "assignAttack", playerId: "p1", target: { type: "enemy", instanceId: expect.any(String) }, amount: 1 },
+      { type: "assignAttack", playerId: "p1", target: { type: "location" }, amount: 1 },
+    ]);
+    const dumped = match.submit({
+      type: "assignAttack",
+      playerId: "p1",
+      target: { type: "location" },
+      amount: 2,
+    });
+    expect(dumped.ok).toBe(false);
+    const enemy = actions[0]!.command;
+    const location = actions[1]!.command;
+    expect(match.submit(enemy).ok).toBe(true);
+    expect(match.getState().board.enemies.active).toHaveLength(0);
+    expect(match.submit(location).ok).toBe(true);
+    const locationId = match.getState().board.locations.active!;
+    expect(match.getState().cards[locationId]?.damage).toBe(1);
+    expect(match.getState().players.p1?.pools.attack).toBe(0);
+  });
+
+  it("оставляет карту stays в игре после конца хода", () => {
+    const match = Match.create(
+      fixtureGame((config) => {
+        config.cards.push({
+          id: "ally",
+          name: "Союзник",
+          kind: "starter",
+          text: "Остаётся в игре.",
+          image: "assets/fixture/starter.svg",
+          tags: ["ally"],
+          stays: true,
+        });
+        config.heroes[0]!.startingDeck = [
+          { definitionId: "ally", count: 1 },
+          { definitionId: "spark", count: 4 },
+        ];
+        config.cards.find((card) => card.id === "gate")!.health = 30;
+      }),
+      { gameId: "fixture", seed: 1, players: [{ name: "Ада", controller: "human", heroId: "ada" }] },
+    );
+    const allyId = match
+      .getState()
+      .players.p1!.zones.hand.find((id) => match.getState().cards[id]?.definitionId === "ally");
+    expect(allyId).toBeTruthy();
+    expect(match.submit({ type: "playCard", playerId: "p1", instanceId: allyId! }).ok).toBe(true);
+    expect(match.submit({ type: "endTurn", playerId: "p1" }).ok).toBe(true);
+    const after = match.getState().players.p1!;
+    expect(after.zones.play).toEqual([allyId]);
+    expect(after.zones.hand.map((id) => match.getState().cards[id]?.definitionId)).toEqual([
+      "spark",
+      "spark",
+      "spark",
+      "spark",
+    ]);
+    expect(after.zones.discard.some((id) => match.getState().cards[id]?.definitionId === "ally")).toBe(false);
   });
 
   it("прячет порядок колоды и чужую руку, если так сказано в конфиге", () => {

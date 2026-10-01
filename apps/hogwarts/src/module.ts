@@ -100,20 +100,22 @@ const cards: CardDefinition[] = [
     id: "hp-ally",
     name: "Союзник факультета",
     kind: "market",
-    text: "Возьмите карту.",
+    text: "Возьмите карту. Союзник остаётся в игре.",
     image: `${art}/market.svg`,
     tags: ["ally"],
     cost: 4,
+    stays: true,
     effects: [{ trigger: "onPlay", effects: [{ op: "draw", amount: 1 }] }],
   },
   {
     id: "hp-cloak",
     name: "Мантия покровителя",
     kind: "market",
-    text: "Получите атаку по числу союзников в игре, минимум 1.",
+    text: "Получите атаку по числу союзников в игре, минимум 1. Остаётся в игре.",
     image: `${art}/market.svg`,
     tags: ["ally", "spell"],
     cost: 5,
+    stays: true,
     effects: [{ trigger: "onPlay", effects: [{ op: "custom", id: "patronus" }] }],
   },
   {
@@ -165,13 +167,14 @@ const cards: CardDefinition[] = [
     id: "hp-hall",
     name: "Большой зал",
     kind: "location",
-    text: "Один враг. Одно событие за ход.",
+    text: "Два врага. Два события за ход. В начале хода активный герой получает 1 урон.",
     image: `${art}/location.svg`,
     tags: ["location"],
-    health: 14,
-    enemyCount: 1,
-    eventCount: 1,
-    maxEnemies: 2,
+    health: 16,
+    enemyCount: 2,
+    eventCount: 2,
+    maxEnemies: 3,
+    effects: [{ trigger: "onTurnStart", effects: [{ op: "damagePlayer", amount: 1, target: "current" }] }],
   },
   {
     id: "hp-hex",
@@ -223,11 +226,13 @@ const cards: CardDefinition[] = [
   },
 ];
 
-const startingDeck = [
-  { definitionId: "hp-strike", count: 4 },
-  { definitionId: "hp-gather", count: 3 },
-  { definitionId: "hp-sip", count: 2 },
-];
+function deck(strike: number, gather: number, sip: number) {
+  return [
+    { definitionId: "hp-strike", count: strike },
+    { definitionId: "hp-gather", count: gather },
+    { definitionId: "hp-sip", count: sip },
+  ];
+}
 
 const heroes: HeroDefinition[] = [
   {
@@ -241,7 +246,7 @@ const heroes: HeroDefinition[] = [
       usage: "oncePerTurn",
       effects: [{ op: "gain", resource: "attack", amount: 1 }],
     },
-    startingDeck,
+    startingDeck: deck(6, 2, 1),
   },
   {
     id: "ron",
@@ -254,7 +259,7 @@ const heroes: HeroDefinition[] = [
       usage: "oncePerTurn",
       effects: [{ op: "draw", amount: 1 }],
     },
-    startingDeck,
+    startingDeck: deck(3, 3, 3),
   },
   {
     id: "hermione",
@@ -267,7 +272,7 @@ const heroes: HeroDefinition[] = [
       usage: "oncePerTurn",
       effects: [{ op: "custom", id: "patronus" }],
     },
-    startingDeck,
+    startingDeck: deck(2, 6, 1),
   },
   {
     id: "neville",
@@ -280,7 +285,7 @@ const heroes: HeroDefinition[] = [
       usage: "passive",
       effects: [{ op: "heal", amount: 1, target: "current" }],
     },
-    startingDeck,
+    startingDeck: deck(4, 4, 1),
   },
 ];
 
