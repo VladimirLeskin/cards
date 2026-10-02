@@ -137,6 +137,15 @@ export function mountPark(root: HTMLElement, config: ParkConfig): void {
       button.addEventListener("click", () => {
         const instanceId = button.dataset.instance ?? "";
         const kind = button.dataset.kind ?? "";
+        const view = match?.view();
+        if (!view || view.phase !== "action") {
+          note = "Тайл из руки кладётся после перехода. Сначала нажмите «Сдвинуть болезни» или клетку «Идти».";
+          selected = null;
+          focusId = null;
+          paint();
+          return;
+        }
+        note = "";
         if (kind === "focus") focusId = focusId === instanceId ? null : instanceId;
         else selected = selected === instanceId ? null : instanceId;
         paint();
@@ -259,21 +268,24 @@ export function mountPark(root: HTMLElement, config: ParkConfig): void {
         const diseases = cell.diseases
           .map((disease) => `<span class="token disease" title="${esc(disease.name)}">${esc(disease.name.slice(0, 1))}</span>`)
           .join("");
+        const mark = legal ? cellMark(view) : "";
+        const here = cell.players.some((player) => player.id === view.activePlayerId);
         const body = cell.tile
-          ? `<img src="${esc(cell.tile.image)}" alt="" /><span class="cell-name">${esc(cell.tile.name)}</span>`
-          : `<span class="empty">${legal ? "сюда" : ""}</span>`;
-        return `<button type="button" class="cell ${cell.tile ? `kind-${cell.tile.kind}` : "blank"} ${legal ? "is-legal" : ""} ${shifting ? "is-shift" : ""}" style="grid-column:${cell.x - minX + 1};grid-row:${cell.y - minY + 1}" data-testid="cell" data-act="cell" data-x="${cell.x}" data-y="${cell.y}" data-legal="${legal ? "true" : "false"}">${body}<span class="tokens">${people}${diseases}</span></button>`;
+          ? `<img src="${esc(cell.tile.image)}" alt="" /><span class="cell-name">${esc(cell.tile.name)}</span>${mark ? `<span class="cell-mark">${esc(mark)}</span>` : ""}`
+          : `<span class="empty">${esc(mark)}</span>`;
+        return `<button type="button" class="cell ${cell.tile ? `kind-${cell.tile.kind}` : "blank"} ${legal ? "is-legal" : ""} ${shifting ? "is-shift" : ""} ${here ? "is-hero" : ""}" style="grid-column:${cell.x - minX + 1};grid-row:${cell.y - minY + 1}" data-testid="cell" data-act="cell" data-x="${cell.x}" data-y="${cell.y}" data-legal="${legal ? "true" : "false"}">${body}<span class="tokens">${people}${diseases}</span></button>`;
       })
       .join("");
     const discarding = view.phase === "start" || view.phase === "trim" || view.phase === "reaction";
     const hand = view.hand
       .map((card) => {
         const picked = card.instanceId === selected || card.instanceId === focusId;
-        return `<div class="card ${picked ? "is-selected" : ""} kind-${card.kind}" data-testid="hand-card" data-instance="${esc(card.instanceId)}">
+        const pickable = view.phase === "action" ? "is-pickable" : "";
+        return `<div class="card ${picked ? "is-selected" : ""} ${pickable} kind-${card.kind}" data-testid="hand-card" data-instance="${esc(card.instanceId)}">
           <button type="button" class="pick" data-act="pick" data-instance="${esc(card.instanceId)}" data-kind="${card.kind}">
             <img src="${esc(card.image)}" alt="" />
             <span class="card-name">${esc(card.name)}</span>
-            <span class="card-meta">${kindLabel[card.kind] ?? card.kind}${card.vp ? ` · ${card.vp}` : ""}</span>
+            <span class="card-meta">${picked ? "выбран · " : ""}${kindLabel[card.kind] ?? card.kind}${card.vp ? ` · ${card.vp}` : ""}</span>
           </button>
           ${discarding ? `<button type="button" data-testid="discard" data-act="discard" data-instance="${esc(card.instanceId)}">Сбросить</button>` : ""}
         </div>`;
@@ -309,7 +321,7 @@ export function mountPark(root: HTMLElement, config: ParkConfig): void {
         <div>
           <h1>${esc(view.title)}</h1>
           <p class="phase" data-testid="phase" data-phase="${view.phase}">${phaseLabel[view.phase]} · круг ${view.round}</p>
-          <p class="prompt" data-testid="prompt">${esc(view.status === "over" ? "Парк закрыт." : view.prompt)}</p>
+          <p class="prompt" data-testid="prompt">${esc(stepText(view))}</p>
         </div>
         <button type="button" data-act="reset" data-testid="new-game">Новая партия</button>
       </header>
@@ -323,11 +335,37 @@ export function mountPark(root: HTMLElement, config: ParkConfig): void {
           <div class="scores">${scores}</div>
           <p class="meta">Тайлы в колоде: ${view.tileDeckCount}. Реакции: ${view.reactionDeckCount}. Приступы: ${view.hearts}${view.closingLeft != null ? `. До закрытия ходов: ${view.closingLeft}` : ""}</p>
           <div class="toolbar" data-testid="toolbar">${tools}</div>
+          <p class="hand-hint" data-testid="hint">${esc(stepText(view))}</p>
           <div class="hand" data-testid="hand">${hand || `<p class="muted">Рука пуста</p>`}</div>
           <ol class="log" data-testid="log">${view.log.map((entry) => `<li>${esc(entry.message)}</li>`).join("")}</ol>
         </aside>
       </div>
     </section>`;
+  };
+
+  const stepText = (view: ParkView): string => {
+    if (view.status === "over") return "Парк закрыт.";
+    if (view.phase === "start" || view.phase === "trim" || view.phase === "reaction") return view.prompt;
+    if (view.phase === "move" && shiftMode && shiftFrom) return "Нажмите пустую клетку «Сюда» рядом с выбранным тайлом.";
+    if (view.phase === "move" && shiftMode) return "Нажмите тайл на поле с меткой «Переставить».";
+    if (view.phase === "move") {
+      const canWalk = view.legalActions.some((action) => action.command.type === "moveSelf");
+      return canWalk
+        ? "Нажмите клетку «Идти» или кнопку «Сдвинуть болезни». Тайл из руки кладётся следующим шагом."
+        : "Нажмите «Сдвинуть болезни». Затем выберите тайл в руке и клетку «Поставить».";
+    }
+    if (!selected && focusId) return "Фокус выбран. Теперь выберите тайл, который кладёте на поле.";
+    if (!selected) return "Выберите тайл в руке. Затем нажмите зелёную клетку «Поставить» рядом с героем.";
+    const card = view.hand.find((item) => item.instanceId === selected);
+    const name = card ? `«${card.name}»` : "Тайл";
+    return `${name} выбран. Нажмите зелёную клетку «Поставить» рядом с героем.`;
+  };
+
+  const cellMark = (view: ParkView): string => {
+    if (view.phase === "move" && shiftMode && shiftFrom) return "Сюда";
+    if (view.phase === "move" && shiftMode) return "Переставить";
+    if (view.phase === "move") return "Идти";
+    return "Поставить";
   };
 
   const cellLegal = (view: ParkView, x: number, y: number) => {
