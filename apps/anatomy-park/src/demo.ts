@@ -1,16 +1,14 @@
-import { createEngine } from "@deckforge/engine";
-import { anatomyParkModule } from "./module";
+import { ParkMatch } from "@deckforge/engine";
+import { anatomyPark } from "./catalog";
 
-const engine = createEngine([anatomyParkModule]);
-const match = engine.createMatch({
-  gameId: "anatomy-park",
+const match = ParkMatch.create(anatomyPark, {
   seed: 11,
   players: [
-    { name: "Рик", controller: "ai", heroId: "rick" },
-    { name: "Морти", controller: "ai", heroId: "morty" },
+    { name: "Рик", controller: "ai", characterId: "rick" },
+    { name: "Морти", controller: "ai", characterId: "morty" },
   ],
 });
 const state = match.getState();
-console.log(anatomyParkModule.config.title);
-console.log(`сид 11, ходов ${state.turn}, статус ${state.status} (${state.outcome?.reason ?? "—"})`);
+console.log(anatomyPark.title);
+console.log(`сид 11, круг ${state.round}, статус ${state.status} (${state.outcome?.reason ?? "—"})`);
 for (const event of state.log.slice(-6)) console.log(`  ${event.message}`);
