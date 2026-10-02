@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="28" fill="#3d7ea6"/>
+  <circle cx="80" cy="78" r="36" fill="#f4e2c8"/>
+  <circle cx="68" cy="74" r="4" fill="#243038"/>
+  <circle cx="92" cy="74" r="4" fill="#243038"/>
+  <path d="M66 92 Q80 102 94 92" fill="none" stroke="#243038" stroke-width="3"/>
+  <text x="80" y="142" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fff">Бет</text>
+</svg>
