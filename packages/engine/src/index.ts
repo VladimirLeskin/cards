@@ -44,3 +44,27 @@ export function createEngine(modules: GameModule[]): DeckEngine {
   for (const game of modules) registry.register(game);
   return new DeckEngine(registry);
 }
+
+export { chooseParkAction } from "./park/ai";
+export { ParkMatch } from "./park/match";
+export { applyPark, createParkState, legalPark, phasePrompt, placeScore, recover } from "./park/rules";
+export type {
+  CreateParkOptions,
+  ParkCardView,
+  ParkCellView,
+  ParkCharacterDefinition,
+  ParkCommand,
+  ParkConfig,
+  ParkDiseaseDefinition,
+  ParkLegalAction,
+  ParkPhase,
+  ParkPlayerSetup,
+  ParkPlayerView,
+  ParkReactionDefinition,
+  ParkState,
+  ParkTileDefinition,
+  ParkView,
+  ReactionEffect,
+  TileColor,
+  TileKind,
+} from "./park/types";

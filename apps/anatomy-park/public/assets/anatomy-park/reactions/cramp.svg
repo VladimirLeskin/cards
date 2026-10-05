@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+  <rect width="240" height="340" fill="#7a5ea7"/>
+  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.4"/>
+  <polygon points="120,70 132,110 174,110 140,134 152,174 120,150 88,174 100,134 66,110 108,110" fill="#fff" fill-opacity="0.92"/>
+  <text x="120" y="236" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fff">Судорога</text>
+</svg>

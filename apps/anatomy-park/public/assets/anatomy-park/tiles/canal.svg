@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="340" viewBox="0 0 240 340">
+  <rect width="240" height="340" fill="#5c6b73"/>
+  <rect x="14" y="14" width="212" height="312" rx="12" fill="none" stroke="#fff" stroke-opacity="0.4"/>
+  <rect x="42" y="108" width="156" height="22" rx="11" fill="#fff" fill-opacity="0.92"/>
+  <text x="120" y="236" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#fff">Канал</text>
+</svg>

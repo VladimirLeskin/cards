@@ -1,7 +1,7 @@
 {
   "name": "@deckforge/engine",
   "version": "0.1.0",
-  "description": "Ядро колодостроительных карточных игр",
+  "description": "Ядро карточных игр: колодострой и парк из тайлов",
   "type": "module",
   "files": ["dist"],
   "exports": {

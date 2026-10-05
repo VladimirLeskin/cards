@@ -10,8 +10,7 @@
     "test": "vitest run && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@deckforge/engine": "*",
-    "@deckforge/table": "*"
+    "@deckforge/engine": "*"
   },
   "devDependencies": {
     "tsx": "^4.20.3",
